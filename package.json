@@ -1,0 +1,7 @@
+{
+  "name": "refinery-relay",
+  "private": true,
+  "scripts": {
+    "test:js": "node --test test/javascript/chat_test.mjs"
+  }
+}

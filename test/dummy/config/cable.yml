@@ -1,0 +1,13 @@
+development:
+  adapter: async
+
+test:
+  # The async adapter lets system-test browser clients receive broadcasts from
+  # the in-process Action Cable server. Redis-backed availability state is
+  # exercised separately by the integration helper.
+  adapter: async
+
+production:
+  adapter: redis
+  url: <%= ENV.fetch("REDIS_URL") { "redis://localhost:6379/1" } %>
+  channel_prefix: dummy_production
