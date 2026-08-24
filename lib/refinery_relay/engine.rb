@@ -16,6 +16,7 @@ module RefineryRelay
         refinery_relay/admin.js
         refinery_relay/chat.js
         refinery_relay/application.css
+        refinery_relay/niimble-logo-light-tp.png
       ]
     end
 

@@ -571,6 +571,18 @@
   text-underline-offset: 0.2em;
 }
 
+.refinery-relay-chat__attribution {
+  align-items: center;
+  display: inline-flex;
+  gap: 0.35rem;
+}
+
+.refinery-relay-chat__footer-logo {
+  display: inline-block;
+  height: 0.8rem;
+  width: auto;
+}
+
 .refinery-relay-chat__footer a:hover {
   color: var(--refinery-relay-text);
 }

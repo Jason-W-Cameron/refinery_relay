@@ -27,6 +27,8 @@ class RefineryRelayLlmChatPodTest < ActionView::TestCase
     render partial: "refinery/pods/shared/llm_chat_pod", locals: { pod: pod }
 
     assert_select "section#refinery-relay-chat-42[data-refinery-relay-chat]" do
+      assert_select ".refinery-relay-chat__eyebrow", text: "Niimble Relay"
+      assert_select ".refinery-relay-chat__footer-logo[alt='Niimble']", count: 1
       assert_select "h2", text: "Ask Simon", count: 2
       assert_select ".refinery-relay-chat__welcome", text: "What would you like to know?"
       assert_select ".refinery-relay-chat__introduction p", text: "Answers come from this website."

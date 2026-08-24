@@ -164,8 +164,14 @@
 
   <footer class="refinery-relay-chat__footer">
     <span>Answers are generated from this organisation’s published information using AI.</span>
-    <a href="https://www.niimble.io" target="_blank" rel="noopener noreferrer">
-      Niimble Relay developed by Niimble
+    <a class="refinery-relay-chat__attribution"
+       href="https://www.niimble.io"
+       target="_blank"
+       rel="noopener noreferrer">
+      <span>Niimble Relay developed by</span>
+      <%= image_tag "refinery_relay/niimble-logo-light-tp.png",
+                    alt: "Niimble",
+                    class: "refinery-relay-chat__footer-logo" %>
     </a>
   </footer>
 </section>
