@@ -21,6 +21,7 @@ module RefineryRelay
 
     config.to_prepare do
       RefineryRelay::PodRegistration.install!
+      RefineryRelay::PageChangeTracking.install!
     end
   end
 end

@@ -10,5 +10,6 @@ Next steps:
 Chat endpoints:
   GET  /refinery_relay/api/relay/chat/availability
   POST /refinery_relay/api/relay/chat
+  GET  /refinery_relay/api/relay/documents
 
 The installer can be run again safely; existing host configuration is preserved.

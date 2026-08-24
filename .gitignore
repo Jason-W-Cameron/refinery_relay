@@ -8,7 +8,8 @@
 /test/dummy/log/*.log
 /test/dummy/storage/
 /test/dummy/tmp/
-
+/test/dummy*
+/package-lock.json
 # Local environment files
 /.env
 /.env.*
