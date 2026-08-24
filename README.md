@@ -50,6 +50,8 @@ The installer also adds the engine stylesheet to the host stylesheet manifest:
 
 The stylesheet is scoped beneath `.refinery-relay-chat`. A host can override the theme without
 copying engine CSS by setting the `--refinery-relay-*` custom properties on that root class.
+The chat typography inherits the consuming website's computed font, including its configured
+font stack and loaded webfont.
 The Pod partial does not output separate asset tags, preventing duplicate JavaScript, Action Cable
 subscriptions, or stylesheet requests.
 
@@ -60,12 +62,15 @@ available for optional application-specific overrides:
 ```ruby
 RefineryRelay.configure do |config|
   config.chat_tenant_key = "my-refinery-site"
+  config.chat_prompt_placeholder = "How many Comrades Marathons must I run to get a Green Number?"
 end
 ```
 
+The prompt placeholder is also available through `RELAY_CHAT_PROMPT_PLACEHOLDER`.
+
 The engine registers the `LLM Chat` Pod type. In Refinery admin, the Pod title is the chat
-heading, subtitle is the welcome message, body is introductory content, and Pod Item titles are
-suggested questions.
+heading and Pod Item titles are suggested questions. The LLM Chat Pod does not use the generic
+subtitle or body fields.
 
 The chat theme can be configured once per Refinery site in the `Styling` section beneath
 Suggested Questions when editing an `LLM Chat` Pod. The four available values are accent colour,

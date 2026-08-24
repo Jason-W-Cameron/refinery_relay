@@ -22,7 +22,8 @@ class RefineryRelayConfigurationTest < ActiveSupport::TestCase
       "RELAY_CHAT_ACCENT_COLOR" => "#2563eb",
       "RELAY_CHAT_BACKGROUND_COLOR" => "#ffffff",
       "RELAY_CHAT_SURFACE_COLOR" => "#f8fafc",
-      "RELAY_CHAT_TEXT_COLOR" => "#111827"
+      "RELAY_CHAT_TEXT_COLOR" => "#111827",
+      "RELAY_CHAT_PROMPT_PLACEHOLDER" => "How many races must I run?"
     }
 
     configuration = RefineryRelay.configure_from_env!(env)
@@ -39,6 +40,7 @@ class RefineryRelayConfigurationTest < ActiveSupport::TestCase
     assert_equal "#ffffff", configuration.chat_background_color
     assert_equal "#f8fafc", configuration.chat_surface_color
     assert_equal "#111827", configuration.chat_text_color
+    assert_equal "How many races must I run?", configuration.chat_prompt_placeholder
   end
 
   test "supports explicit configuration overrides" do
@@ -53,6 +55,13 @@ class RefineryRelayConfigurationTest < ActiveSupport::TestCase
     configuration = RefineryRelay::Configuration.from_env({})
 
     assert_equal "refinery", configuration.chat_tenant_key
+  end
+
+  test "uses the default prompt placeholder when it is blank" do
+    configuration = RefineryRelay::Configuration.new(chat_prompt_placeholder: " ")
+
+    assert_equal RefineryRelay::Configuration::DEFAULT_CHAT_PROMPT_PLACEHOLDER,
+                 configuration.chat_prompt_placeholder
   end
 
   test "supports explicit Redis and Action Cable dependencies" do

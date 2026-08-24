@@ -1,0 +1,29 @@
+/*
+ *= require refinery_relay/chat
+ */
+
+/* The admin preview uses the same chat markup and styles as the public pod. */
+.refinery-relay-admin-preview {
+  max-width: none;
+  width: 100%;
+}
+
+/* Refinery's admin stylesheet applies layout rules that are not present on the public page. */
+.refinery-relay-admin-preview .refinery-relay-chat__initial,
+.refinery-relay-admin-preview .refinery-relay-chat__header,
+.refinery-relay-admin-preview .refinery-relay-chat__suggestions,
+.refinery-relay-admin-preview .refinery-relay-chat__form--initial,
+.refinery-relay-admin-preview .refinery-relay-chat__composer {
+  display: block;
+  width: 100%;
+}
+
+.refinery-relay-admin-preview .refinery-relay-chat__header,
+.refinery-relay-admin-preview .refinery-relay-chat__suggestions,
+.refinery-relay-admin-preview .refinery-relay-chat__form--initial {
+  float: none;
+}
+
+.refinery-relay-admin-preview .refinery-relay-chat__composer {
+  display: flex;
+}

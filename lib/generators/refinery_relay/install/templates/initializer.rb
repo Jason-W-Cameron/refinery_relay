@@ -18,4 +18,5 @@ RefineryRelay.configure do |config|
   # config.chat_background_color = "#101010"
   # config.chat_surface_color = "#181818"
   # config.chat_text_color = "#f5f5f5"
+  # config.chat_prompt_placeholder = "Ask a question about this organisation's published information…"
 end

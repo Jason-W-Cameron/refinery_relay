@@ -22,8 +22,6 @@
     if (!$("#pod_pod_type").length) return;
 
     addPodField("#pod_title", "Chat heading");
-    addPodField("#pod_subtitle", "Welcome message");
-    addPodField("#pod_body", "Introductory content");
 
     var podItems = $(".pod-items");
     podItems.addClass(POD_TYPE);
@@ -97,16 +95,173 @@
       if (!payload || !payload.theme) return;
 
       THEME_FIELDS.forEach(function(field) {
-        if (payload.theme[field.key]) inputs[field.key].val(payload.theme[field.key]);
+        if (payload.theme[field.key]) {
+          inputs[field.key].val(payload.theme[field.key]).trigger("change");
+        }
       });
     }).catch(function() {
       // The initializer defaults remain usable when theme storage is unavailable.
     });
   }
 
+  function fieldValue(selector, fallback) {
+    var field = $(selector);
+    var value = field.length ? field.val() : "";
+    return $.trim(value || "") || fallback;
+  }
+
+  function colorChannels(hex) {
+    var value = (hex || "").replace(/^#/, "");
+    if (value.length === 3) value = value.split("").map(function(channel) { return channel + channel; }).join("");
+    return [0, 2, 4].map(function(index) { return parseInt(value.substr(index, 2), 16); });
+  }
+
+  function rgbaColor(hex, alpha) {
+    return "rgba(" + colorChannels(hex).join(", ") + ", " + alpha + ")";
+  }
+
+  function contrastText(hex) {
+    var channels = colorChannels(hex).map(function(channel) { return channel / 255; }).map(function(channel) {
+      return channel <= 0.03928 ? channel / 12.92 : Math.pow((channel + 0.055) / 1.055, 2.4);
+    });
+    var luminance = 0.2126 * channels[0] + 0.7152 * channels[1] + 0.0722 * channels[2];
+    return luminance > 0.179 ? "#171717" : "#ffffff";
+  }
+
+  function suggestedQuestions(podItems) {
+    var questions = [];
+
+    podItems.find("input, textarea").filter(function() {
+      return /\[title\]/.test($(this).attr("name") || "");
+    }).each(function() {
+      var value = $.trim($(this).val() || "");
+      if (value && questions.indexOf(value) === -1) questions.push(value);
+    });
+
+    if (questions.length) return questions;
+
+    podItems.find("tr.field").filter(function() {
+      return $.trim($(this).find("th").first().text()).toLowerCase() === "title";
+    }).each(function() {
+      var value = $.trim($(this).find("td").first().text());
+      if (value && questions.indexOf(value) === -1) questions.push(value);
+    });
+
+    return questions;
+  }
+
+  function preparePreview() {
+    var podType = $("#pod_pod_type");
+    var podItems = $(".pod-items").last();
+    var podExample = $(".previews").first();
+    var podExamplePanel = podExample.children("div").first();
+    var preview;
+
+    if (!podType.length || $(".refinery-relay-admin-preview").length) return;
+
+    preview = $("<section>", { "class": "refinery-relay-chat refinery-relay-admin-preview" });
+    preview.append($("<div>", { "class": "refinery-relay-chat__initial" }).append(
+      $("<header>", { "class": "refinery-relay-chat__header" }).append(
+        $("<p>", { "class": "refinery-relay-chat__eyebrow", text: "Niimble Relay" }),
+        $("<h2>", { "class": "refinery-relay-chat__heading" }),
+      ),
+      $("<div>", { "class": "refinery-relay-chat__suggestions" }).append(
+        $("<h3>", { "class": "refinery-relay-chat__suggestions-heading", text: "Suggested questions" }),
+        $("<div>", { "class": "refinery-relay-chat__suggestion-list" })
+      ),
+      $("<div>", { "class": "refinery-relay-chat__form refinery-relay-chat__form--initial" }).append(
+        $("<div>", { "class": "refinery-relay-chat__composer" }).append(
+          $("<span>", {
+            "class": "refinery-relay-chat__input",
+            text: "Ask a question about this organisation's published information…"
+          }),
+          $("<span>", { "class": "refinery-relay-chat__send", text: "Send" })
+        )
+      )
+    ));
+    preview.append($("<footer>", { "class": "refinery-relay-chat__footer" }).append(
+      $("<span>", { text: "Answers are generated from this organisation’s published information using AI." }),
+      $("<span>", { "class": "refinery-relay-chat__attribution" }).append(
+        $("<span>", { text: "Niimble Relay developed by Niimble" })
+      )
+    ));
+
+    if (podExamplePanel.length) {
+      podExamplePanel.append(preview);
+    } else {
+      ( $(".refinery-relay-theme-fields").length ? $(".refinery-relay-theme-fields") : podItems )
+        .after(preview);
+    }
+
+    function updatePreview() {
+      var questions = suggestedQuestions(podItems);
+      var questionList = preview.find(".refinery-relay-chat__suggestion-list").empty();
+
+      preview.find(".refinery-relay-chat__heading").text(fieldValue("#pod_title", "Ask us a question"));
+
+      questions.forEach(function(question) {
+        questionList.append($("<span>", {
+          "class": "refinery-relay-chat__suggestion",
+          text: question
+        }));
+      });
+      preview.find(".refinery-relay-chat__suggestions").toggle(questions.length > 0);
+
+      var theme = {};
+      THEME_FIELDS.forEach(function(field) {
+        var input = $("#pod_refinery_relay_" + field.key);
+        theme[field.key] = input.length && input.val() ? input.val() : field.defaultValue;
+      });
+      preview[0].style.setProperty("--refinery-relay-accent", theme.accent_color);
+      preview[0].style.setProperty("--refinery-relay-accent-soft", rgbaColor(theme.accent_color, 0.09));
+      preview[0].style.setProperty("--refinery-relay-accent-focus", rgbaColor(theme.accent_color, 0.13));
+      preview[0].style.setProperty("--refinery-relay-accent-text", contrastText(theme.accent_color));
+      preview[0].style.setProperty("--refinery-relay-background", theme.background_color);
+      preview[0].style.setProperty("--refinery-relay-surface", theme.surface_color);
+      preview[0].style.setProperty("--refinery-relay-surface-raised", rgbaColor(theme.text_color, 0.08));
+      preview[0].style.setProperty("--refinery-relay-border", rgbaColor(theme.text_color, 0.14));
+      preview[0].style.setProperty("--refinery-relay-border-strong", rgbaColor(theme.text_color, 0.28));
+      preview[0].style.setProperty("--refinery-relay-text", theme.text_color);
+      preview[0].style.setProperty("--refinery-relay-text-muted", rgbaColor(theme.text_color, 0.68));
+      preview[0].style.setProperty("--refinery-relay-danger", contrastText(theme.background_color) === "#ffffff" ? "#fca5a5" : "#b91c1c");
+
+      if (podExamplePanel.length && podType.val() === POD_TYPE) {
+        podExamplePanel.children(".field").hide();
+      }
+      preview.toggle(podType.val() === POD_TYPE);
+    }
+
+    $("#pod_title").on("input.refineryRelayPreview change.refineryRelayPreview keyup.refineryRelayPreview", updatePreview);
+    $("#pod_pod_type").on("change.refineryRelayPreview", updatePreview);
+    $(".refinery-relay-theme-fields").on("input.refineryRelayPreview change.refineryRelayPreview", "input", updatePreview);
+    podItems.on("input.refineryRelayPreview change.refineryRelayPreview", "input, textarea", updatePreview);
+
+    if (window.MutationObserver && podItems.length) {
+      new MutationObserver(updatePreview).observe(podItems[0], { childList: true, subtree: true });
+    }
+
+    updatePreview();
+  }
+
+  function temporarilyHideLlmChatPodExample() {
+    var podType = $("#pod_pod_type");
+    var podExample = $(".previews").first();
+    if (!podType.length || !podExample.length) return;
+
+    function syncVisibility() {
+      podExample.toggle(podType.val() !== POD_TYPE);
+    }
+
+    podType.on("change.refineryRelayPreview", syncVisibility);
+    syncVisibility();
+  }
+
   $(function () {
     preparePodForm();
     preparePodItemForm();
     prepareThemeFields();
+    // TODO: Re-enable the LLM Chat Pod Example after the admin preview layout is finalised.
+    // preparePreview();
+    temporarilyHideLlmChatPodExample();
   });
 })(jQuery);

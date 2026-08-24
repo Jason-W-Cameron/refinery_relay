@@ -6,6 +6,7 @@ module RefineryRelay
     DEFAULT_CHAT_BACKGROUND_COLOR = "#101010"
     DEFAULT_CHAT_SURFACE_COLOR = "#181818"
     DEFAULT_CHAT_TEXT_COLOR = "#f5f5f5"
+    DEFAULT_CHAT_PROMPT_PLACEHOLDER = "Ask a question about this organisation's published information…"
 
     attr_accessor :source_token,
                   :rss_feed_url,
@@ -19,6 +20,7 @@ module RefineryRelay
                   :chat_background_color,
                   :chat_surface_color,
                   :chat_text_color,
+                  :chat_prompt_placeholder,
                   :redis,
                   :broadcaster
 
@@ -35,7 +37,8 @@ module RefineryRelay
         chat_accent_color: env.fetch("RELAY_CHAT_ACCENT_COLOR", DEFAULT_CHAT_ACCENT_COLOR),
         chat_background_color: env.fetch("RELAY_CHAT_BACKGROUND_COLOR", DEFAULT_CHAT_BACKGROUND_COLOR),
         chat_surface_color: env.fetch("RELAY_CHAT_SURFACE_COLOR", DEFAULT_CHAT_SURFACE_COLOR),
-        chat_text_color: env.fetch("RELAY_CHAT_TEXT_COLOR", DEFAULT_CHAT_TEXT_COLOR)
+        chat_text_color: env.fetch("RELAY_CHAT_TEXT_COLOR", DEFAULT_CHAT_TEXT_COLOR),
+        chat_prompt_placeholder: env.fetch("RELAY_CHAT_PROMPT_PLACEHOLDER", DEFAULT_CHAT_PROMPT_PLACEHOLDER)
       )
     end
 
@@ -46,6 +49,7 @@ module RefineryRelay
                    chat_background_color: DEFAULT_CHAT_BACKGROUND_COLOR,
                    chat_surface_color: DEFAULT_CHAT_SURFACE_COLOR,
                    chat_text_color: DEFAULT_CHAT_TEXT_COLOR,
+                   chat_prompt_placeholder: DEFAULT_CHAT_PROMPT_PLACEHOLDER,
                    redis: nil, broadcaster: nil)
       @source_token = source_token
       @rss_feed_url = rss_feed_url
@@ -59,6 +63,7 @@ module RefineryRelay
       @chat_background_color = chat_background_color
       @chat_surface_color = chat_surface_color
       @chat_text_color = chat_text_color
+      @chat_prompt_placeholder = chat_prompt_placeholder
       @redis = redis
       @broadcaster = broadcaster
     end
@@ -73,6 +78,10 @@ module RefineryRelay
 
     def chat_base_url
       strip_trailing_slashes(@chat_base_url)
+    end
+
+    def chat_prompt_placeholder
+      @chat_prompt_placeholder.to_s.strip.presence || DEFAULT_CHAT_PROMPT_PLACEHOLDER
     end
 
     def chat_tenant_key

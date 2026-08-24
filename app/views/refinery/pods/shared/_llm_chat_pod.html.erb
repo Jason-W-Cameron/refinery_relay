@@ -19,62 +19,84 @@
          data-channel="RefineryRelay::RelayChatChannel"
          style="<%= theme.css_variables %>">
   <div class="refinery-relay-chat__initial" data-refinery-relay-view="initial">
-    <header class="refinery-relay-chat__header">
-      <p class="refinery-relay-chat__eyebrow">Niimble Relay</p>
-      <h2 id="<%= chat_id %>-heading" class="refinery-relay-chat__heading">
-        <%= contract.heading(pod) %>
-      </h2>
-      <p class="refinery-relay-chat__welcome"><%= contract.welcome_message(pod) %></p>
+    <div class="refinery-relay-chat__initial-layout">
+      <div class="refinery-relay-chat__initial-content">
+        <header class="refinery-relay-chat__header">
+          <p class="refinery-relay-chat__eyebrow">Niimble Relay</p>
+          <h2 id="<%= chat_id %>-heading" class="refinery-relay-chat__heading">
+            <%= contract.heading(pod) %>
+          </h2>
+        </header>
 
-      <% if contract.intro_content(pod).present? %>
-        <div class="refinery-relay-chat__introduction">
-          <%= sanitize(contract.intro_content(pod)) %>
-        </div>
-      <% end %>
-    </header>
-
-    <% if suggested_questions.any? %>
-      <div class="refinery-relay-chat__suggestions" aria-labelledby="<%= chat_id %>-suggestions-heading">
-        <h3 id="<%= chat_id %>-suggestions-heading" class="refinery-relay-chat__suggestions-heading">
-          Suggested questions
-        </h3>
-        <div class="refinery-relay-chat__suggestion-list">
-          <% suggested_questions.each do |question| %>
-            <button type="button"
-                    class="refinery-relay-chat__suggestion"
-                    data-refinery-relay-suggestion>
-              <%= question %>
-            </button>
+        <form class="refinery-relay-chat__form refinery-relay-chat__form--initial"
+              action="<%= chat_path %>"
+              method="post"
+              data-refinery-relay-form>
+          <% if suggested_questions.any? %>
+            <div class="refinery-relay-chat__suggestions">
+              <div class="refinery-relay-chat__suggestion-list">
+                <% suggested_questions.each do |question| %>
+                  <button type="button"
+                          class="refinery-relay-chat__suggestion"
+                          data-refinery-relay-suggestion>
+                    <%= question %>
+                  </button>
+                <% end %>
+              </div>
+            </div>
           <% end %>
-        </div>
-      </div>
-    <% end %>
 
-    <form class="refinery-relay-chat__form refinery-relay-chat__form--initial"
-          action="<%= chat_path %>"
-          method="post"
-          data-refinery-relay-form>
-      <label for="<%= chat_id %>-prompt" class="refinery-relay-chat__label">
-        Ask a question
-      </label>
-      <div class="refinery-relay-chat__composer">
-        <textarea id="<%= chat_id %>-prompt"
-                  class="refinery-relay-chat__input"
-                  name="message"
-                  rows="1"
-                  maxlength="4000"
-                  autocomplete="off"
-                  required
-                  placeholder="Ask a question about this organisation's published information…"
-                  data-refinery-relay-input></textarea>
-        <button type="submit"
-                class="refinery-relay-chat__send"
-                aria-label="Send question"
-                data-refinery-relay-send>
-          <span aria-hidden="true">Send</span>
-        </button>
+          <label for="<%= chat_id %>-prompt" class="refinery-relay-chat__label">
+            Ask a question
+          </label>
+          <div class="refinery-relay-chat__composer">
+            <span class="refinery-relay-chat__prompt-icon" aria-hidden="true">
+              <span></span>
+            </span>
+            <textarea id="<%= chat_id %>-prompt"
+                      class="refinery-relay-chat__input"
+                      name="message"
+                      rows="1"
+                      maxlength="4000"
+                      autocomplete="off"
+                      required
+                      placeholder="<%= RefineryRelay.configuration.chat_prompt_placeholder %>"
+                      data-refinery-relay-input></textarea>
+            <button type="submit"
+                    class="refinery-relay-chat__send"
+                    aria-label="Send question"
+                    data-refinery-relay-send>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M12 19V5"></path>
+                <path d="m5 12 7-7 7 7"></path>
+              </svg>
+            </button>
+          </div>
+        </form>
       </div>
-    </form>
+
+      <div class="refinery-relay-chat__initial-aside">
+        <aside class="refinery-relay-chat__information-card">
+          <p>
+            This intelligent assistant is powered by this organisation’s published information.
+            It helps visitors find accurate answers and key information instantly.
+          </p>
+        </aside>
+
+        <footer class="refinery-relay-chat__footer">
+          <span>Answers are generated from this organisation’s published information using AI.</span>
+          <a class="refinery-relay-chat__attribution"
+             href="https://www.niimble.io"
+             target="_blank"
+             rel="noopener noreferrer">
+            <span>Niimble Relay developed by</span>
+            <%= image_tag "refinery_relay/niimble-logo-light-tp.png",
+                          alt: "Niimble",
+                          class: "refinery-relay-chat__footer-logo" %>
+          </a>
+        </footer>
+      </div>
+    </div>
   </div>
 
   <div class="refinery-relay-chat__conversation"
@@ -122,8 +144,11 @@
           <label for="<%= chat_id %>-conversation-prompt" class="refinery-relay-chat__label">
             Ask another question
           </label>
-          <div class="refinery-relay-chat__composer">
-            <textarea id="<%= chat_id %>-conversation-prompt"
+            <div class="refinery-relay-chat__composer">
+              <span class="refinery-relay-chat__prompt-icon" aria-hidden="true">
+                <span></span>
+              </span>
+              <textarea id="<%= chat_id %>-conversation-prompt"
                       class="refinery-relay-chat__input"
                       name="message"
                       rows="1"
@@ -136,7 +161,10 @@
                     class="refinery-relay-chat__send"
                     aria-label="Send question"
                     data-refinery-relay-send>
-              <span aria-hidden="true">Send</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M12 19V5"></path>
+                <path d="m5 12 7-7 7 7"></path>
+              </svg>
             </button>
           </div>
         </form>
@@ -164,16 +192,4 @@
     Chat is temporarily unavailable. Please try again later.
   </div>
 
-  <footer class="refinery-relay-chat__footer">
-    <span>Answers are generated from this organisation’s published information using AI.</span>
-    <a class="refinery-relay-chat__attribution"
-       href="https://www.niimble.io"
-       target="_blank"
-       rel="noopener noreferrer">
-      <span>Niimble Relay developed by</span>
-      <%= image_tag "refinery_relay/niimble-logo-light-tp.png",
-                    alt: "Niimble",
-                    class: "refinery-relay-chat__footer-logo" %>
-    </a>
-  </footer>
 </section>
