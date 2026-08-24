@@ -34,12 +34,9 @@ class RefineryRelayInstallGeneratorTest < Rails::Generators::TestCase
     assert_file "config/routes.rb" do |content|
       assert_includes content, 'get "/refinery_relay/api/relay/chat/availability"'
       assert_includes content, 'post "/refinery_relay/api/relay/chat"'
-      assert_includes content, 'get "/refinery_relay/api/relay/documents"'
       assert_includes content, 'to: "refinery_relay/api/relay/chats#create"'
       assert_includes content, RefineryRelay::Generators::InstallGenerator::CABLE_MOUNT
     end
-
-    assert Dir.glob(File.join(destination_root, "db/migrate/*_create_refinery_relay_document_changes.rb")).any?
 
     assert_file "app/assets/javascripts/application.js" do |content|
       assert_includes content, RefineryRelay::Generators::InstallGenerator::JAVASCRIPT_DIRECTIVE
@@ -59,7 +56,6 @@ class RefineryRelayInstallGeneratorTest < Rails::Generators::TestCase
     assert_file "config/routes.rb" do |content|
       assert_equal 1, content.scan('get "/refinery_relay/api/relay/chat/availability"').length
       assert_equal 1, content.scan('post "/refinery_relay/api/relay/chat"').length
-      assert_equal 1, content.scan('get "/refinery_relay/api/relay/documents"').length
       assert_equal 1, content.scan(RefineryRelay::Generators::InstallGenerator::CABLE_MOUNT).length
     end
 

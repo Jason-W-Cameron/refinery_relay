@@ -6,6 +6,4 @@ Rails.application.routes.draw do
       to: "refinery_relay/api/relay/chats#availability"
   post "/refinery_relay/api/relay/chat",
        to: "refinery_relay/api/relay/chats#create"
-  get "/refinery_relay/api/relay/documents",
-      to: "refinery_relay/api/relay/documents#index"
 end

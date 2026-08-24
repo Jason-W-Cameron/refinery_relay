@@ -10,7 +10,6 @@ module RefineryRelay
       STYLESHEET_DIRECTIVE = "*= require refinery_relay/application"
       CHAT_ROUTE = "/refinery_relay/api/relay/chat"
       AVAILABILITY_ROUTE = "#{CHAT_ROUTE}/availability"
-      DOCUMENTS_ROUTE = "/refinery_relay/api/relay/documents"
       CABLE_MOUNT = 'mount ActionCable.server => "/cable"'
 
       source_root File.expand_path("templates", __dir__)
@@ -33,14 +32,6 @@ module RefineryRelay
         template "initializer.rb", path
       end
 
-      def install_migrations
-        return if Dir.glob(destination_path("db/migrate/*_create_refinery_relay_document_changes.rb")).any?
-
-        filename = "db/migrate/#{Time.now.utc.strftime('%Y%m%d%H%M%S')}_create_refinery_relay_document_changes.rb"
-        source = File.join(self.class.source_root, "db/migrate/create_refinery_relay_document_changes.rb")
-        create_file filename, File.read(source)
-      end
-
       def install_routes
         path = "config/routes.rb"
         unless destination_file?(path)
@@ -57,7 +48,7 @@ module RefineryRelay
           return
         end
 
-        routes = [ "# Niimble Relay routes use direct host routes for Refinery routing-filter compatibility." ]
+        routes = [ "# Niimble Relay chat routes use direct host routes for Refinery routing-filter compatibility." ]
         unless availability_installed
           routes << <<~RUBY.chomp
             get "#{AVAILABILITY_ROUTE}",
@@ -68,12 +59,6 @@ module RefineryRelay
           routes << <<~RUBY.chomp
             post "#{CHAT_ROUTE}",
                  to: "refinery_relay/api/relay/chats#create"
-          RUBY
-        end
-        unless route_installed?(content, "get", DOCUMENTS_ROUTE)
-          routes << <<~RUBY.chomp
-            get "#{DOCUMENTS_ROUTE}",
-                to: "refinery_relay/api/relay/documents#index"
           RUBY
         end
         routes << CABLE_MOUNT unless cable_installed
