@@ -4,6 +4,7 @@ module RefineryRelay
     DEFAULT_CHAT_READ_TIMEOUT_SECONDS = 45
 
     attr_accessor :source_token,
+                  :rss_feed_url,
                   :public_base_url,
                   :chat_base_url,
                   :chat_token,
@@ -16,6 +17,7 @@ module RefineryRelay
     def self.from_env(env = ENV)
       new(
         source_token: env["RELAY_SOURCE_TOKEN"],
+        rss_feed_url: env.fetch("RELAY_RSS_FEED_URL", ""),
         public_base_url: env.fetch("RELAY_PUBLIC_BASE_URL", ""),
         chat_base_url: env.fetch("RELAY_CHAT_BASE_URL", ""),
         chat_token: env["RELAY_CHAT_TOKEN"],
@@ -25,10 +27,11 @@ module RefineryRelay
       )
     end
 
-    def initialize(source_token: nil, public_base_url: "", chat_base_url: "", chat_token: nil,
+    def initialize(source_token: nil, rss_feed_url: "", public_base_url: "", chat_base_url: "", chat_token: nil,
                    chat_tenant_key: "refinery", chat_open_timeout_seconds: DEFAULT_CHAT_OPEN_TIMEOUT_SECONDS,
                    chat_read_timeout_seconds: DEFAULT_CHAT_READ_TIMEOUT_SECONDS, redis: nil, broadcaster: nil)
       @source_token = source_token
+      @rss_feed_url = rss_feed_url
       @public_base_url = public_base_url
       @chat_base_url = chat_base_url
       @chat_token = chat_token
@@ -41,6 +44,10 @@ module RefineryRelay
 
     def public_base_url
       strip_trailing_slashes(@public_base_url)
+    end
+
+    def rss_feed_url
+      @rss_feed_url.to_s.strip
     end
 
     def chat_base_url

@@ -67,6 +67,20 @@ The engine registers the `LLM Chat` Pod type. In Refinery admin, the Pod title i
 heading, subtitle is the welcome message, body is introductory content, and Pod Item titles are
 suggested questions.
 
+## RSS source conversion
+
+The gem can convert an existing RSS or Atom feed into Relay's JSON document format without a
+database migration or a host `routes.rb` change. Configure the feed and a private source token:
+
+```text
+RELAY_RSS_FEED_URL=https://www.example.com/feed.rss
+RELAY_SOURCE_TOKEN=replace-with-a-private-token
+```
+
+The gem automatically provides `GET /refinery_relay/api/relay/documents`. Configure Relay's HTTP
+feed source with that URL and the same bearer token. Each RSS item becomes one Relay document;
+HTML in descriptions is converted to plain searchable text.
+
 ## Development
 
 Run the Ruby and browser test suites:

@@ -2,6 +2,7 @@ require "refinery_relay/version"
 require "refinery_relay/configuration"
 require "refinery_relay/pod_contract"
 require "refinery_relay/pod_registration"
+require "refinery_relay/rss_document_feed"
 require "refinery_relay/engine"
 
 module RefineryRelay

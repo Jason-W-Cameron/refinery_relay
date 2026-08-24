@@ -12,6 +12,7 @@ class RefineryRelayConfigurationTest < ActiveSupport::TestCase
   test "loads Relay configuration from environment variables" do
     env = {
       "RELAY_SOURCE_TOKEN" => "source-token",
+      "RELAY_RSS_FEED_URL" => "https://refinery.example/nlweb/rss",
       "RELAY_PUBLIC_BASE_URL" => "https://refinery.example/",
       "RELAY_CHAT_BASE_URL" => "https://relay.example/",
       "RELAY_CHAT_TOKEN" => "chat-token",
@@ -23,6 +24,7 @@ class RefineryRelayConfigurationTest < ActiveSupport::TestCase
     configuration = RefineryRelay.configure_from_env!(env)
 
     assert_equal "source-token", configuration.source_token
+    assert_equal "https://refinery.example/nlweb/rss", configuration.rss_feed_url
     assert_equal "https://refinery.example", configuration.public_base_url
     assert_equal "https://relay.example", configuration.chat_base_url
     assert_equal "chat-token", configuration.chat_token
