@@ -28,7 +28,7 @@ module RefineryRelay
       body = response.body.to_s
       enforce_response_limit!(response, body)
       feed = Nokogiri::XML(body) { |config| config.strict.nonet }
-      items = item_nodes(feed)
+      items = page_items(item_nodes(feed))
       raise Error, "RSS feed contains #{items.size} items; limit the feed to #{MAX_ITEMS} items" if items.size > MAX_ITEMS
 
       documents = items.map { |item| document_for(item, feed) }
@@ -87,9 +87,7 @@ module RefineryRelay
       identifier = child_text(item, "guid").presence || child_text(item, "id").presence || url
       title = clean_text(child_text(item, "title")).presence || "Untitled RSS item"
       content = [ title, item_content(item) ].select(&:present?).uniq.join("\n\n")
-      categories = item.xpath("./*[local-name()='category']").filter_map do |category|
-        clean_text(category["term"].presence || category.text).presence
-      end
+      categories = item_categories(item)
 
       {
         "external_id" => "rss:#{Digest::SHA256.hexdigest(identifier)}",
@@ -128,6 +126,20 @@ module RefineryRelay
         child_text(item, name).presence
       end.first
       clean_text(value)
+    end
+
+    def page_items(items)
+      pages = items.select do |item|
+        item_categories(item).any? { |category| category.casecmp("Page").zero? }
+      end
+
+      pages.any? ? pages : items
+    end
+
+    def item_categories(item)
+      item.xpath("./*[local-name()='category']").filter_map do |category|
+        clean_text(category["term"].presence || category.text).presence
+      end
     end
 
     def item_updated_at(item, feed)

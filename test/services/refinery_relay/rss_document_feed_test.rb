@@ -45,6 +45,22 @@ class RefineryRelayRssDocumentFeedTest < ActiveSupport::TestCase
     assert_equal "article", document.fetch("content_type")
   end
 
+  test "converts only Page items when an RSS feed contains mixed content types" do
+    body = <<~XML
+      <rss><channel>
+        <item><title>About</title><link>https://example.test/about</link><category>Page</category></item>
+        <item><title>News</title><link>https://example.test/news</link><category>Blog Post</category></item>
+      </channel></rss>
+    XML
+    feed = TestFeed.new(feed_url: "https://example.test/feed.rss")
+    feed.response = successful_response(body)
+
+    documents = feed.call.fetch("documents")
+
+    assert_equal 1, documents.size
+    assert_equal "About", documents.sole.fetch("title")
+  end
+
   test "rejects malformed XML" do
     feed = TestFeed.new(feed_url: "https://example.test/feed.rss")
     feed.response = successful_response("<rss><channel>")

@@ -79,7 +79,9 @@ RELAY_SOURCE_TOKEN=replace-with-a-private-token
 
 The gem automatically provides `GET /refinery_relay/api/relay/documents`. Configure Relay's HTTP
 feed source with that URL and the same bearer token. Each RSS item becomes one Relay document;
-HTML in descriptions is converted to plain searchable text.
+HTML in descriptions is converted to plain searchable text. When a combined feed contains items
+categorized as `Page`, only those Page items are returned; their RSS descriptions can include
+associated Pod content.
 
 ## Development
 
