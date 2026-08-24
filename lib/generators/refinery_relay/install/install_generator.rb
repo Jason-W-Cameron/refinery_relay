@@ -86,6 +86,14 @@ module RefineryRelay
         install_stylesheet_directive(path)
       end
 
+      def install_site_settings_migration
+        return if Dir.glob(destination_path("db/migrate/*_create_refinery_relay_site_settings.rb")).any?
+
+        timestamp = Time.now.utc.strftime("%Y%m%d%H%M%S")
+        copy_file "create_refinery_relay_site_settings.rb",
+                  "db/migrate/#{timestamp}_create_refinery_relay_site_settings.rb"
+      end
+
       def show_post_install_steps
         readme "POST_INSTALL"
       end

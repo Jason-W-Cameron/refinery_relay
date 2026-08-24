@@ -7,6 +7,7 @@
   chat_path = route_helpers.api_relay_chat_path(script_name: "/refinery_relay")
   availability_path = route_helpers.api_relay_chat_availability_path(script_name: "/refinery_relay")
   suggested_questions = contract.suggested_questions(pod)
+  theme = RefineryRelay::ChatTheme.current
 %>
 
 <section id="<%= chat_id %>"
@@ -15,7 +16,8 @@
          data-refinery-relay-chat
          data-chat-url="<%= chat_path %>"
          data-availability-url="<%= availability_path %>"
-         data-channel="RefineryRelay::RelayChatChannel">
+         data-channel="RefineryRelay::RelayChatChannel"
+         style="<%= theme.css_variables %>">
   <div class="refinery-relay-chat__initial" data-refinery-relay-view="initial">
     <header class="refinery-relay-chat__header">
       <p class="refinery-relay-chat__eyebrow">Niimble Relay</p>

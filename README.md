@@ -67,6 +67,12 @@ The engine registers the `LLM Chat` Pod type. In Refinery admin, the Pod title i
 heading, subtitle is the welcome message, body is introductory content, and Pod Item titles are
 suggested questions.
 
+The chat theme can be configured once per Refinery site in the `Styling` section beneath
+Suggested Questions when editing an `LLM Chat` Pod. The four available values are accent colour,
+background colour, surface colour, and text colour. Supporting colours and contrast-safe button
+text are derived automatically and shared by all LLM Chat Pods. The generated initializer remains
+the fallback when no admin values have been saved.
+
 ## RSS source conversion
 
 The gem can convert an existing RSS or Atom feed into Relay's JSON document format without a

@@ -18,7 +18,11 @@ class RefineryRelayConfigurationTest < ActiveSupport::TestCase
       "RELAY_CHAT_TOKEN" => "chat-token",
       "RELAY_CHAT_TENANT_KEY" => "refinery-site",
       "RELAY_CHAT_OPEN_TIMEOUT_SECONDS" => "8",
-      "RELAY_CHAT_READ_TIMEOUT_SECONDS" => "60"
+      "RELAY_CHAT_READ_TIMEOUT_SECONDS" => "60",
+      "RELAY_CHAT_ACCENT_COLOR" => "#2563eb",
+      "RELAY_CHAT_BACKGROUND_COLOR" => "#ffffff",
+      "RELAY_CHAT_SURFACE_COLOR" => "#f8fafc",
+      "RELAY_CHAT_TEXT_COLOR" => "#111827"
     }
 
     configuration = RefineryRelay.configure_from_env!(env)
@@ -31,6 +35,10 @@ class RefineryRelayConfigurationTest < ActiveSupport::TestCase
     assert_equal "refinery-site", configuration.chat_tenant_key
     assert_equal 8, configuration.chat_open_timeout_seconds
     assert_equal 60, configuration.chat_read_timeout_seconds
+    assert_equal "#2563eb", configuration.chat_accent_color
+    assert_equal "#ffffff", configuration.chat_background_color
+    assert_equal "#f8fafc", configuration.chat_surface_color
+    assert_equal "#111827", configuration.chat_text_color
   end
 
   test "supports explicit configuration overrides" do

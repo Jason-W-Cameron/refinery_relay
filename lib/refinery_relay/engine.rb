@@ -6,6 +6,8 @@ module RefineryRelay
       app.routes.prepend do
         get "/refinery_relay/api/relay/documents",
             to: "refinery_relay/api/relay/documents#index"
+        get "/refinery_relay/admin/settings",
+            to: "refinery_relay/admin/settings#show"
       end
     end
 
@@ -29,6 +31,13 @@ module RefineryRelay
 
     config.to_prepare do
       RefineryRelay::PodRegistration.install!
+
+      if defined?(::Refinery::Pods::Admin::PodsController)
+        controller = ::Refinery::Pods::Admin::PodsController
+        unless controller.ancestors.include?(RefineryRelay::PodsAdminController)
+          controller.prepend(RefineryRelay::PodsAdminController)
+        end
+      end
     end
   end
 end

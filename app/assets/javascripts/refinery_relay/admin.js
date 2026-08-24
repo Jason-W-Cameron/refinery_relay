@@ -2,6 +2,13 @@
   "use strict";
 
   var POD_TYPE = "llm_chat";
+  var SETTINGS_ENDPOINT = "/refinery_relay/admin/settings";
+  var THEME_FIELDS = [
+    { key: "accent_color", label: "Accent colour", defaultValue: "#fbbf24" },
+    { key: "background_color", label: "Background colour", defaultValue: "#101010" },
+    { key: "surface_color", label: "Surface colour", defaultValue: "#181818" },
+    { key: "text_color", label: "Text colour", defaultValue: "#f5f5f5" }
+  ];
 
   function addPodField(inputSelector, label) {
     var input = $(inputSelector);
@@ -40,8 +47,66 @@
     addPodField("#pod_item_title", "Suggested question");
   }
 
+  function prepareThemeFields() {
+    var podType = $("#pod_pod_type");
+    var podItems = $(".pod-items").last();
+    if (!podType.length || $(".refinery-relay-theme-fields").length) return;
+
+    var container = $("<fieldset>", { "class": "refinery-relay-theme-fields field llm_chat" });
+    container.append($("<legend>", { text: "Styling" }));
+    container.append($("<small>", {
+      "class": "refinery-relay-theme-hint",
+      text: "These colours apply to all LLM Chat Pods on this website."
+    }));
+
+    var inputs = {};
+    THEME_FIELDS.forEach(function(field) {
+      var wrapper = $("<div>", { "class": "field llm_chat" });
+      var inputId = "pod_refinery_relay_" + field.key;
+      var label = $("<label>", { "for": inputId, text: field.label });
+      var input = $("<input>", {
+        type: "color",
+        id: inputId,
+        name: "pod[refinery_relay_" + field.key + "]",
+        value: field.defaultValue
+      });
+
+      inputs[field.key] = input;
+      wrapper.append(label, input);
+      container.append(wrapper);
+    });
+
+    (podItems.length ? podItems : podType.closest(".field")).after(container);
+
+    function syncVisibility() {
+      container.toggle(podType.val() === POD_TYPE);
+    }
+
+    podType.on("change", syncVisibility);
+    syncVisibility();
+
+    if (typeof window.fetch !== "function") return;
+
+    window.fetch(SETTINGS_ENDPOINT, {
+      headers: { "Accept": "application/json" },
+      credentials: "same-origin",
+      cache: "no-store"
+    }).then(function(response) {
+      return response.ok ? response.json() : null;
+    }).then(function(payload) {
+      if (!payload || !payload.theme) return;
+
+      THEME_FIELDS.forEach(function(field) {
+        if (payload.theme[field.key]) inputs[field.key].val(payload.theme[field.key]);
+      });
+    }).catch(function() {
+      // The initializer defaults remain usable when theme storage is unavailable.
+    });
+  }
+
   $(function () {
     preparePodForm();
     preparePodItemForm();
+    prepareThemeFields();
   });
 })(jQuery);

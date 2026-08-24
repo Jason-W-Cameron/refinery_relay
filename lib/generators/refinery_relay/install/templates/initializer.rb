@@ -14,4 +14,8 @@ RefineryRelay.configure do |config|
   # config.chat_tenant_key = "my-refinery-site"
   # config.chat_open_timeout_seconds = 5
   # config.chat_read_timeout_seconds = 45
+  # config.chat_accent_color = "#fbbf24"
+  # config.chat_background_color = "#101010"
+  # config.chat_surface_color = "#181818"
+  # config.chat_text_color = "#f5f5f5"
 end
