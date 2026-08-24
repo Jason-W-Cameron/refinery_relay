@@ -31,8 +31,18 @@ class RefineryRelayLlmChatPodTest < ActionView::TestCase
       assert_select ".refinery-relay-chat__initial-aside > .refinery-relay-chat__information-card", count: 1
       assert_select ".refinery-relay-chat__initial-aside > .refinery-relay-chat__footer", count: 1
       assert_select ".refinery-relay-chat__attribution", count: 1
+      assert_select ".refinery-relay-chat__attribution > span", text: "Niimble Relay developed by", count: 1
+      assert_select ".refinery-relay-chat__attribution > a[href='https://www.niimble.io'] img[alt='Niimble']", count: 1
+      assert_select ".refinery-relay-chat__attribution > a > span", count: 0
+      assert_select ".refinery-relay-chat__reset svg", count: 1
+      assert_select ".refinery-relay-chat__sources-heading-row", count: 1
+      assert_select ".refinery-relay-chat__empty-sources-icon", text: "✦", count: 1
       assert_select ".refinery-relay-chat__prompt-icon span", count: 2
-      assert_select ".refinery-relay-chat__send svg", count: 2
+      assert_select ".refinery-relay-chat__send-icon", count: 2
+      assert_select ".refinery-relay-chat__loading-icon", count: 2
+      assert_select ".refinery-relay-chat__form--initial .refinery-relay-chat__send", count: 1
+      assert_select ".refinery-relay-chat__form--conversation .refinery-relay-chat__send--conversation", count: 1
+      assert_select ".refinery-relay-chat__form--conversation .refinery-relay-chat__send-icon path[d='M5 12h14']", count: 1
       assert_select ".refinery-relay-chat__suggestions-heading", count: 0
       assert_select "button[data-refinery-relay-suggestion]", 2
       assert_select "form.refinery-relay-chat__form--initial > .refinery-relay-chat__suggestions", count: 1
@@ -81,6 +91,19 @@ class RefineryRelayLlmChatPodTest < ActionView::TestCase
     assert_select "textarea[data-refinery-relay-input][placeholder='Ask Comrades-GPT something']", count: 1
   ensure
     RefineryRelay.reset_configuration!
+  end
+
+  test "uses prompt placeholder and information card copy saved for the pod" do
+    RefineryRelay::PodSettings.create!(
+      pod_id: 42,
+      prompt_placeholder: "Ask SimonSays anything",
+      information_text: "A custom description for this assistant."
+    )
+
+    render partial: "refinery/pods/shared/llm_chat_pod", locals: { pod: build_pod }
+
+    assert_select "textarea[data-refinery-relay-input][placeholder='Ask SimonSays anything']", count: 1
+    assert_select ".refinery-relay-chat__information-card p", text: "A custom description for this assistant.", count: 1
   end
 
   private

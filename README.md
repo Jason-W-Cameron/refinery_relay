@@ -72,6 +72,10 @@ The engine registers the `LLM Chat` Pod type. In Refinery admin, the Pod title i
 heading and Pod Item titles are suggested questions. The LLM Chat Pod does not use the generic
 subtitle or body fields.
 
+The `Chat content` section on an LLM Chat Pod controls that pod's prompt placeholder and
+right-hand information card. These values are stored per pod; blank values fall back to the
+initializer placeholder and the built-in information-card copy.
+
 The chat theme can be configured once per Refinery site in the `Styling` section beneath
 Suggested Questions when editing an `LLM Chat` Pod. The four available values are accent colour,
 background colour, surface colour, and text colour. Supporting colours and contrast-safe button

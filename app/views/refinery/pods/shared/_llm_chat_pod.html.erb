@@ -8,6 +8,7 @@
   availability_path = route_helpers.api_relay_chat_availability_path(script_name: "/refinery_relay")
   suggested_questions = contract.suggested_questions(pod)
   theme = RefineryRelay::ChatTheme.current
+  pod_settings = RefineryRelay::PodSettings.for(pod)
 %>
 
 <section id="<%= chat_id %>"
@@ -60,15 +61,18 @@
                       maxlength="4000"
                       autocomplete="off"
                       required
-                      placeholder="<%= RefineryRelay.configuration.chat_prompt_placeholder %>"
+                      placeholder="<%= pod_settings.prompt_placeholder %>"
                       data-refinery-relay-input></textarea>
             <button type="submit"
                     class="refinery-relay-chat__send"
                     aria-label="Send question"
                     data-refinery-relay-send>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <svg class="refinery-relay-chat__send-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <path d="M12 19V5"></path>
                 <path d="m5 12 7-7 7 7"></path>
+              </svg>
+              <svg class="refinery-relay-chat__loading-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <circle cx="12" cy="12" r="8" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-dasharray="34 16"></circle>
               </svg>
             </button>
           </div>
@@ -77,23 +81,23 @@
 
       <div class="refinery-relay-chat__initial-aside">
         <aside class="refinery-relay-chat__information-card">
-          <p>
-            This intelligent assistant is powered by this organisation’s published information.
-            It helps visitors find accurate answers and key information instantly.
-          </p>
+          <p><%= pod_settings.information_text %></p>
         </aside>
 
         <footer class="refinery-relay-chat__footer">
           <span>Answers are generated from this organisation’s published information using AI.</span>
-          <a class="refinery-relay-chat__attribution"
-             href="https://www.niimble.io"
-             target="_blank"
-             rel="noopener noreferrer">
+          <div class="refinery-relay-chat__attribution">
             <span>Niimble Relay developed by</span>
-            <%= image_tag "refinery_relay/niimble-logo-light-tp.png",
-                          alt: "Niimble",
-                          class: "refinery-relay-chat__footer-logo" %>
-          </a>
+            <a class="refinery-relay-chat__logo-link"
+               href="https://www.niimble.io"
+               target="_blank"
+               rel="noopener noreferrer"
+               aria-label="Visit Niimble">
+              <%= image_tag "refinery_relay/niimble-logo-light-tp.png",
+                            alt: "Niimble",
+                            class: "refinery-relay-chat__footer-logo" %>
+            </a>
+          </div>
         </footer>
       </div>
     </div>
@@ -112,7 +116,10 @@
               aria-label="Start a new conversation"
               title="Start a new conversation"
               data-refinery-relay-reset>
-        Start over
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M3 12a9 9 0 1 0 3-6.7"></path>
+          <path d="M3 4v5h5"></path>
+        </svg>
       </button>
     </header>
 
@@ -158,12 +165,15 @@
                       placeholder="Ask another question…"
                       data-refinery-relay-input></textarea>
             <button type="submit"
-                    class="refinery-relay-chat__send"
+                    class="refinery-relay-chat__send refinery-relay-chat__send--conversation"
                     aria-label="Send question"
                     data-refinery-relay-send>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="M12 19V5"></path>
-                <path d="m5 12 7-7 7 7"></path>
+              <svg class="refinery-relay-chat__send-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M5 12h14"></path>
+                <path d="m13 6 6 6-6 6"></path>
+              </svg>
+              <svg class="refinery-relay-chat__loading-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <circle cx="12" cy="12" r="8" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-dasharray="34 16"></circle>
               </svg>
             </button>
           </div>
@@ -171,16 +181,19 @@
       </div>
 
       <aside class="refinery-relay-chat__sources-column" aria-labelledby="<%= chat_id %>-sources-heading">
-        <h3 id="<%= chat_id %>-sources-heading" class="refinery-relay-chat__sources-heading">Sources</h3>
+        <div class="refinery-relay-chat__sources-heading-row">
+          <h3 id="<%= chat_id %>-sources-heading" class="refinery-relay-chat__sources-heading">Sources</h3>
+        </div>
         <p class="refinery-relay-chat__source-count"
            aria-live="polite"
            data-refinery-relay-source-count>
           References appear here
         </p>
         <div class="refinery-relay-chat__sources" data-refinery-relay-sources></div>
-        <p class="refinery-relay-chat__empty-sources" data-refinery-relay-empty-sources>
-          Supporting pages will appear here with each answer.
-        </p>
+        <div class="refinery-relay-chat__empty-sources" data-refinery-relay-empty-sources>
+          <span class="refinery-relay-chat__empty-sources-icon" aria-hidden="true">✦</span>
+          <p>Supporting pages will appear here with each answer.</p>
+        </div>
       </aside>
     </div>
   </div>

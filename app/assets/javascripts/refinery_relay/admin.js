@@ -9,6 +9,20 @@
     { key: "surface_color", label: "Surface colour", defaultValue: "#181818" },
     { key: "text_color", label: "Text colour", defaultValue: "#f5f5f5" }
   ];
+  var POD_SETTINGS_FIELDS = [
+    {
+      key: "prompt_placeholder",
+      label: "Prompt placeholder",
+      type: "text",
+      defaultValue: "Ask a question about this organisation's published information…"
+    },
+    {
+      key: "information_text",
+      label: "Information card",
+      type: "textarea",
+      defaultValue: "This intelligent assistant is powered by this organisation’s published information. It helps visitors find accurate answers and key information instantly."
+    }
+  ];
 
   function addPodField(inputSelector, label) {
     var input = $(inputSelector);
@@ -25,11 +39,23 @@
 
     var podItems = $(".pod-items");
     podItems.addClass(POD_TYPE);
-    podItems.find("tr.field").filter(function () {
+    var questionRows = podItems.find("tr.field").filter(function () {
       return $(this).find("th").first().text().trim() === "Title";
-    }).addClass(POD_TYPE);
-    podItems.find("small.field").addClass(POD_TYPE)
-      .html("<strong>Hint:</strong> Each item title becomes a suggested question in the chat.");
+    });
+    questionRows.addClass(POD_TYPE).addClass("refinery-relay-suggestion-title-row").each(function () {
+      $(this).find("th").first().text("Question");
+    });
+
+    var suggestionTable = podItems.find("table").first();
+    suggestionTable.addClass("refinery-relay-suggestion-table");
+    suggestionTable.find("tr").filter(function () {
+      return $(this).find("h3").length > 0;
+    }).addClass("refinery-relay-suggestion-item-header");
+
+    var podHints = podItems.find("small.field");
+    podHints.first().addClass(POD_TYPE).addClass("refinery-relay-pod-items-hint")
+      .html("<strong>Suggested questions:</strong> Add the questions visitors can choose before they start chatting.");
+    podHints.slice(1).hide().removeClass(POD_TYPE);
     podItems.find("h3").first().text("Suggested Questions");
     podItems.find("a").filter(function () {
       return $(this).text().trim() === "Add item";
@@ -101,6 +127,72 @@
       });
     }).catch(function() {
       // The initializer defaults remain usable when theme storage is unavailable.
+    });
+  }
+
+  function preparePodSettingsFields() {
+    var podType = $("#pod_pod_type");
+    var podItems = $(".pod-items").last();
+    if (!podType.length || $(".refinery-relay-pod-settings-fields").length) return;
+
+    var container = $("<fieldset>", { "class": "refinery-relay-pod-settings-fields field llm_chat" });
+    container.append($("<legend>", { text: "Chat content" }));
+    container.append($("<small>", {
+      "class": "refinery-relay-pod-settings-hint",
+      text: "These values apply only to this LLM Chat Pod. Leave them unchanged to use the configured defaults."
+    }));
+
+    var inputs = {};
+    POD_SETTINGS_FIELDS.forEach(function(field) {
+      var wrapper = $("<div>", { "class": "field llm_chat" });
+      var inputId = "pod_refinery_relay_" + field.key;
+      var label = $("<label>", { "for": inputId, text: field.label });
+      var inputType = field.type === "textarea" ? "textarea" : "input";
+      var input = $("<" + inputType + ">", {
+        id: inputId,
+        name: "pod[refinery_relay_" + field.key + "]",
+        type: field.type === "text" ? "text" : undefined
+      });
+
+      if (field.type === "textarea") {
+        input.attr({ rows: 5, maxlength: 2000 }).val(field.defaultValue);
+      } else {
+        input.attr({ maxlength: 500 }).val(field.defaultValue);
+      }
+
+      inputs[field.key] = input;
+      wrapper.append(label, input);
+      container.append(wrapper);
+    });
+
+    (podItems.length ? podItems : podType.closest(".field")).after(container);
+
+    function syncVisibility() {
+      container.toggle(podType.val() === POD_TYPE);
+    }
+
+    podType.on("change", syncVisibility);
+    syncVisibility();
+
+    if (typeof window.fetch !== "function") return;
+
+    var podId = $("#pod_id").val() || $("input[name='pod[id]']").first().val();
+    var endpoint = SETTINGS_ENDPOINT + (podId ? "?pod_id=" + encodeURIComponent(podId) : "");
+    window.fetch(endpoint, {
+      headers: { "Accept": "application/json" },
+      credentials: "same-origin",
+      cache: "no-store"
+    }).then(function(response) {
+      return response.ok ? response.json() : null;
+    }).then(function(payload) {
+      if (!payload || !payload.pod) return;
+
+      POD_SETTINGS_FIELDS.forEach(function(field) {
+        var value = payload.pod[field.key];
+        if (value) inputs[field.key].val(value).trigger("change");
+      });
+    }).catch(function() {
+      // The field defaults remain usable when per-pod storage is unavailable.
     });
   }
 
@@ -260,6 +352,7 @@
     preparePodForm();
     preparePodItemForm();
     prepareThemeFields();
+    preparePodSettingsFields();
     // TODO: Re-enable the LLM Chat Pod Example after the admin preview layout is finalised.
     // preparePreview();
     temporarilyHideLlmChatPodExample();

@@ -10,7 +10,27 @@ module RefineryRelay
       skip_before_action :restrict_controller, only: :show
 
       def show
-        render json: { theme: RefineryRelay::ChatTheme.current.editable_values }
+        render json: {
+          theme: RefineryRelay::ChatTheme.current.editable_values,
+          pod: pod_settings_payload
+        }
+      end
+
+      private
+
+      def pod_settings_payload
+        settings = RefineryRelay::PodSettings.for(refinery_pod)
+        {
+          prompt_placeholder: settings.prompt_placeholder,
+          information_text: settings.information_text
+        }
+      end
+
+      def refinery_pod
+        return unless params[:pod_id].present?
+        return unless defined?(::Refinery::Pods::Pod)
+
+        ::Refinery::Pods::Pod.find_by(id: params[:pod_id])
       end
     end
   end

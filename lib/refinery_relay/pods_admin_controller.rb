@@ -8,9 +8,14 @@ module RefineryRelay
       refinery_relay_surface_color
       refinery_relay_text_color
     ].freeze
+    POD_SETTINGS_ATTRIBUTES = %w[
+      refinery_relay_prompt_placeholder
+      refinery_relay_information_text
+    ].freeze
 
     def self.prepended(controller)
       controller.after_action :persist_refinery_relay_site_theme, only: %i[create update]
+      controller.after_action :persist_refinery_relay_pod_settings, only: %i[create update]
     end
 
     private
@@ -20,6 +25,8 @@ module RefineryRelay
       if pod_parameters.respond_to?(:permit)
         @refinery_relay_theme_attributes = pod_parameters.permit(*THEME_ATTRIBUTES).to_h
         THEME_ATTRIBUTES.each { |attribute| pod_parameters.delete(attribute) }
+        @refinery_relay_pod_settings_attributes = pod_parameters.permit(*POD_SETTINGS_ATTRIBUTES).to_h
+        POD_SETTINGS_ATTRIBUTES.each { |attribute| pod_parameters.delete(attribute) }
       end
 
       super
@@ -34,6 +41,18 @@ module RefineryRelay
         attribute.to_s.delete_prefix("refinery_relay_").to_sym
       end
       RefineryRelay::SiteSettings.save_colors(attributes)
+    end
+
+    def persist_refinery_relay_pod_settings
+      return unless @pod&.persisted?
+      return unless @pod.respond_to?(:system_name) && @pod.system_name.to_s == RefineryRelay::PodContract::POD_TYPE
+      return if @pod.errors.any? || @refinery_relay_pod_settings_attributes.blank?
+      return unless RefineryRelay::PodSettings.connection.data_source_exists?(RefineryRelay::PodSettings.table_name)
+
+      attributes = @refinery_relay_pod_settings_attributes.transform_keys do |attribute|
+        attribute.to_s.delete_prefix("refinery_relay_").to_sym
+      end
+      RefineryRelay::PodSettings.for(@pod).update!(attributes)
     end
   end
 end

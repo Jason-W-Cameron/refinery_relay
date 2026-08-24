@@ -7,6 +7,7 @@
   var CONTROLLER_KEY = "__refineryRelayChatController";
   var VISITOR_STORAGE_KEY = "niimble-relay-visitor-id";
   var CONVERSATION_STORAGE_KEY = "niimble-relay-conversation-id";
+  var VIEW_TRANSITION_MS = 180;
 
   function toArray(collection) {
     return Array.prototype.slice.call(collection || []);
@@ -59,6 +60,7 @@
     this.conversationId = this.restoreConversationId();
     this.visitorId = this.restoreVisitorId();
     this.requestSequence = 0;
+    this.transitionSequence = 0;
     this.isLoading = false;
 
     this.forms.forEach(function(form) {
@@ -199,22 +201,56 @@
   };
 
   ChatController.prototype.showConversation = function() {
+    var controller = this;
+    var transitionId = ++this.transitionSequence;
+
     this.unavailableTarget.hidden = true;
-    this.initialTarget.hidden = true;
+    this.initialTarget.classList.add("is-exiting");
     this.conversationTarget.hidden = false;
+    this.conversationTarget.classList.add("is-entering");
+
+    frame(function() {
+      if (transitionId !== controller.transitionSequence) return;
+      controller.conversationTarget.classList.remove("is-entering");
+    });
+
+    window.setTimeout(function() {
+      if (transitionId !== controller.transitionSequence) return;
+      controller.initialTarget.hidden = true;
+      controller.initialTarget.classList.remove("is-exiting");
+    }, VIEW_TRANSITION_MS);
   };
 
   ChatController.prototype.showInitial = function() {
+    var controller = this;
+    var transitionId = ++this.transitionSequence;
+
     this.unavailableTarget.hidden = true;
-    this.conversationTarget.hidden = true;
+    this.conversationTarget.classList.add("is-exiting");
     this.initialTarget.hidden = false;
+    this.initialTarget.classList.add("is-entering");
+
+    frame(function() {
+      if (transitionId !== controller.transitionSequence) return;
+      controller.initialTarget.classList.remove("is-entering");
+    });
+
+    window.setTimeout(function() {
+      if (transitionId !== controller.transitionSequence) return;
+      controller.conversationTarget.hidden = true;
+      controller.conversationTarget.classList.remove("is-exiting");
+    }, VIEW_TRANSITION_MS);
+
     var input = this.initialTarget.querySelector("[data-refinery-relay-input]");
     if (input) input.focus();
   };
 
   ChatController.prototype.showUnavailable = function() {
     this.requestSequence += 1;
+    this.transitionSequence += 1;
     this.setLoading(false);
+    this.initialTarget.classList.remove("is-entering", "is-exiting");
+    this.conversationTarget.classList.remove("is-entering", "is-exiting");
     this.initialTarget.hidden = true;
     this.conversationTarget.hidden = true;
     this.unavailableTarget.hidden = false;
@@ -504,6 +540,8 @@
     this.isLoading = loading;
     this.sendButtons.forEach(function(button) {
       button.disabled = loading;
+      button.setAttribute("aria-busy", loading ? "true" : "false");
+      button.setAttribute("aria-label", loading ? "Sending question" : "Send question");
       if (loading) button.classList.add("is-loading");
       else button.classList.remove("is-loading");
     });
