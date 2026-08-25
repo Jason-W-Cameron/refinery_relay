@@ -33,6 +33,12 @@
       label: "Footer logo link",
       type: "text",
       defaultValue: "https://www.niimble.io"
+    },
+    {
+      key: "terms_link",
+      label: "Terms & Conditions link",
+      type: "text",
+      defaultValue: "https://www.niimble.io/terms"
     }
   ];
 

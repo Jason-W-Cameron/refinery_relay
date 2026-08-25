@@ -100,7 +100,8 @@ class RefineryRelayLlmChatPodTest < ActionView::TestCase
       prompt_placeholder: "Ask SimonSays anything",
       information_text: "A custom description for this assistant.",
       footer_logo_url: "https://example.test/custom-logo.png",
-      footer_logo_link: "https://example.test/about"
+      footer_logo_link: "https://example.test/about",
+      terms_link: "https://example.test/terms"
     )
 
     render partial: "refinery/pods/shared/llm_chat_pod", locals: { pod: build_pod }
@@ -109,6 +110,8 @@ class RefineryRelayLlmChatPodTest < ActionView::TestCase
     assert_select ".refinery-relay-chat__information-card p", text: "A custom description for this assistant.", count: 1
     assert_select ".refinery-relay-chat__initial-aside .refinery-relay-chat__logo-link[href='https://example.test/about'] > img[src='https://example.test/custom-logo.png']", count: 1
     assert_select ".refinery-relay-chat__conversation-footer .refinery-relay-chat__logo-link[href='https://example.test/about'] > img[src='https://example.test/custom-logo.png']", count: 1
+    assert_select ".refinery-relay-chat__footer .refinery-relay-chat__terms-link[href='https://example.test/terms']", text: "Terms & Conditions", count: 1
+    assert_select ".refinery-relay-chat__conversation-footer .refinery-relay-chat__terms-link[href='https://example.test/terms']", text: "Terms & Conditions", count: 1
   end
 
   private

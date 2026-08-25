@@ -110,6 +110,14 @@ module RefineryRelay
                   "db/migrate/#{timestamp}_add_footer_logo_settings_to_refinery_relay_pod_settings.rb"
       end
 
+      def install_terms_link_migration
+        return if Dir.glob(destination_path("db/migrate/*_add_terms_link_to_refinery_relay_pod_settings.rb")).any?
+
+        timestamp = (Time.now.utc + 3).strftime("%Y%m%d%H%M%S")
+        copy_file "add_terms_link_to_refinery_relay_pod_settings.rb",
+                  "db/migrate/#{timestamp}_add_terms_link_to_refinery_relay_pod_settings.rb"
+      end
+
       def show_post_install_steps
         readme "POST_INSTALL"
       end

@@ -13,6 +13,7 @@ module RefineryRelay
       refinery_relay_information_text
       refinery_relay_footer_logo_url
       refinery_relay_footer_logo_link
+      refinery_relay_terms_link
     ].freeze
 
     def self.prepended(controller)

@@ -320,7 +320,8 @@
 .refinery-relay-chat__reset:focus-visible,
 .refinery-relay-chat__source:focus-visible,
 .refinery-relay-chat__citation:focus-visible,
-.refinery-relay-chat__footer a:focus-visible {
+.refinery-relay-chat__footer a:focus-visible,
+.refinery-relay-chat__conversation-footer a:focus-visible {
   outline: 2px solid var(--refinery-relay-accent);
   outline-offset: 3px;
 }
@@ -727,7 +728,8 @@
   text-align: center;
 }
 
-.refinery-relay-chat__footer a {
+.refinery-relay-chat__footer a,
+.refinery-relay-chat__conversation-footer a {
   color: #999;
   text-decoration: none;
 }
@@ -744,8 +746,14 @@
   width: auto;
 }
 
-.refinery-relay-chat__footer a:hover {
+.refinery-relay-chat__footer a:hover,
+.refinery-relay-chat__conversation-footer a:hover {
   color: var(--refinery-relay-text);
+}
+
+.refinery-relay-chat__terms-link {
+  text-decoration: underline !important;
+  text-underline-offset: 0.12em;
 }
 
 .refinery-relay-chat__messages,

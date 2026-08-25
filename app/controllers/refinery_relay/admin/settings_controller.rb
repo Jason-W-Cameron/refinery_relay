@@ -24,7 +24,8 @@ module RefineryRelay
           prompt_placeholder: settings.prompt_placeholder,
           information_text: settings.information_text,
           footer_logo_url: settings.footer_logo_url,
-          footer_logo_link: settings.footer_logo_link
+          footer_logo_link: settings.footer_logo_link,
+          terms_link: settings.terms_link
         }
       end
 
