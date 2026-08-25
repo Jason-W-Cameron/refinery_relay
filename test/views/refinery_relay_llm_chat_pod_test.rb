@@ -59,8 +59,10 @@ class RefineryRelayLlmChatPodTest < ActionView::TestCase
     assert_select "[data-refinery-relay-chat][data-availability-url='/refinery_relay/api/relay/chat/availability']"
     assert_select "form[data-refinery-relay-form]", 2
     assert_select "textarea[data-refinery-relay-input][maxlength='4000']", 2
-    assert_select "[data-refinery-relay-messages][role='log'][aria-live='polite']"
-    assert_select "[data-refinery-relay-error][role='alert'][hidden]"
+      assert_select "[data-refinery-relay-messages][role='log'][aria-live='polite']"
+      assert_select "[data-refinery-relay-typing][role='status'][aria-label='Niimble Relay is preparing an answer']", count: 1
+      assert_select "[data-refinery-relay-typing] .refinery-relay-chat__typing-dots > span", count: 3
+      assert_select "[data-refinery-relay-error][role='alert'][hidden]"
     assert_select "[data-refinery-relay-unavailable][role='status'][hidden]"
   end
 
