@@ -60,7 +60,7 @@ class RefineryRelayLlmChatPodTest < ActionView::TestCase
     assert_select "form[data-refinery-relay-form]", 2
     assert_select "textarea[data-refinery-relay-input][maxlength='4000']", 2
       assert_select "[data-refinery-relay-messages][role='log'][aria-live='polite']"
-      assert_select "[data-refinery-relay-typing][role='status'][aria-label='Niimble Relay is preparing an answer']", count: 1
+      assert_select "[data-refinery-relay-typing][role='status'][aria-label='Generating response']", count: 1
       assert_select "[data-refinery-relay-typing] .refinery-relay-chat__typing-dots > span", count: 3
       assert_select "[data-refinery-relay-error][role='alert'][hidden]"
     assert_select "[data-refinery-relay-unavailable][role='status'][hidden]"
@@ -114,6 +114,33 @@ class RefineryRelayLlmChatPodTest < ActionView::TestCase
     assert_select ".refinery-relay-chat__conversation-footer .refinery-relay-chat__logo-link[href='https://example.test/about'] > img[src='https://example.test/custom-logo.png']", count: 1
     assert_select ".refinery-relay-chat__footer .refinery-relay-chat__terms-link[href='https://example.test/terms']", text: "Terms & Conditions", count: 1
     assert_select ".refinery-relay-chat__conversation-footer .refinery-relay-chat__terms-link[href='https://example.test/terms']", text: "Terms & Conditions", count: 1
+  end
+
+  test "uses the information card image instead of the fallback copy" do
+    settings = Struct.new(
+      :prompt_placeholder,
+      :information_text,
+      :information_image_url,
+      :information_image_alt,
+      :footer_logo_url,
+      :footer_logo_link,
+      :terms_link
+    ).new(
+      "Ask anything",
+      "Fallback information copy",
+      "https://example.test/information-card.jpg",
+      "People collaborating",
+      "https://example.test/logo.png",
+      "https://example.test",
+      "https://example.test/terms"
+    )
+
+    stub_class_method(RefineryRelay::PodSettings, :for, ->(_pod) { settings }) do
+      render partial: "refinery/pods/shared/llm_chat_pod", locals: { pod: build_pod }
+    end
+
+    assert_select ".refinery-relay-chat__information-card--image img.refinery-relay-chat__information-image[src='https://example.test/information-card.jpg'][alt='People collaborating']", count: 1
+    assert_select ".refinery-relay-chat__information-card--image p", count: 0
   end
 
   private

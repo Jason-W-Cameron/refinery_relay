@@ -11,6 +11,7 @@ module RefineryRelay
     POD_SETTINGS_ATTRIBUTES = %w[
       refinery_relay_prompt_placeholder
       refinery_relay_information_text
+      refinery_relay_information_image_id
       refinery_relay_footer_logo_url
       refinery_relay_footer_logo_link
       refinery_relay_terms_link

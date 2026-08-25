@@ -23,9 +23,13 @@ module RefineryRelay
         {
           prompt_placeholder: settings.prompt_placeholder,
           information_text: settings.information_text,
+          information_image_id: settings.information_image_id_value,
+          information_image_url: settings.information_image_url,
+          information_image_alt: settings.information_image_alt,
           footer_logo_url: settings.footer_logo_url,
           footer_logo_link: settings.footer_logo_link,
-          terms_link: settings.terms_link
+          terms_link: settings.terms_link,
+          image_picker_path: refinery.insert_admin_images_path
         }
       end
 

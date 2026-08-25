@@ -27,6 +27,25 @@ module RefineryRelay
       setting_value(:information_text).to_s.strip.presence || DEFAULT_INFORMATION_TEXT
     end
 
+    def information_image_id_value
+      setting_value(:information_image_id)
+    end
+
+    def information_image
+      return unless information_image_id_value.present?
+      return unless defined?(::Refinery::Image)
+
+      ::Refinery::Image.find_by(id: information_image_id_value)
+    end
+
+    def information_image_url
+      information_image&.url
+    end
+
+    def information_image_alt
+      information_image&.alt.presence || "Information card"
+    end
+
     def footer_logo_url
       value = setting_value(:footer_logo_url).to_s.strip.presence || RefineryRelay.configuration.chat_footer_logo_url
       valid_logo_reference?(value) ? value : DEFAULT_FOOTER_LOGO_URL

@@ -23,6 +23,11 @@
       defaultValue: "This intelligent assistant is powered by this organisation’s published information. It helps visitors find accurate answers and key information instantly."
     },
     {
+      key: "information_image_id",
+      label: "Information card image",
+      type: "image"
+    },
+    {
       key: "footer_logo_url",
       label: "Footer logo image URL",
       type: "text",
@@ -173,7 +178,85 @@
     }));
 
     var inputs = {};
+    var imagePickerCounter = 0;
+
+    function imagePickerField(field) {
+      imagePickerCounter += 1;
+      var pickerId = "refinery-relay-information-image-picker-" + imagePickerCounter;
+      var callbackName = pickerId.replace(/[^a-z0-9_]/gi, "_") + "_changed";
+      var imagePickerPath = "/refinery/images/admin/images/insert";
+      var wrapper = $("<div>", { "class": "field llm_chat refinery-relay-image-field" });
+      var inputId = "pod_refinery_relay_" + field.key;
+      var label = $("<label>", { "for": inputId, text: field.label });
+      var picker = $("<div>", {
+        id: pickerId,
+        "class": "refinery-relay-image-picker"
+      });
+      var input = $("<input>", {
+        type: "hidden",
+        id: inputId,
+        name: "pod[refinery_relay_" + field.key + "]",
+        "class": "refinery-relay-image-picker__input"
+      });
+      var link = $("<a>", {
+        "class": "refinery-relay-image-picker__link dialog",
+        href: imagePickerPath + "?dialog=true&callback=" + encodeURIComponent(callbackName) + "&width=866&height=510",
+        title: "Choose Information Card image"
+      });
+      var image = $("<img>", {
+        "class": "refinery-relay-image-picker__preview",
+        alt: "",
+        style: "display:none"
+      });
+      var empty = $("<span>", {
+        "class": "refinery-relay-image-picker__empty",
+        text: "Choose an image"
+      });
+      var remove = $("<button>", {
+        type: "button",
+        "class": "refinery-relay-image-picker__remove",
+        text: "Remove image",
+        style: "display:none"
+      });
+
+      link.append(image, empty);
+      picker.append(input, link, remove);
+      wrapper.append(label, picker);
+
+      function applyImage(args) {
+        var selectedImage = $(args);
+        var imageId = selectedImage.attr("id") || args.id || "";
+        var imageUrl = selectedImage.attr("data-medium") || selectedImage.attr("data-original") || selectedImage.attr("src") || args.src || "";
+        var imageAlt = selectedImage.attr("alt") || selectedImage.attr("title") || args.alt || "Information card";
+
+        imageId = imageId.replace(/^image_/, "");
+        if (!imageId || !imageUrl) return;
+
+        input.val(imageId).trigger("change");
+        image.attr({ src: imageUrl, alt: imageAlt }).show();
+        empty.hide();
+        remove.show();
+      }
+
+      window[callbackName] = applyImage;
+      remove.on("click", function() {
+        input.val("").trigger("change");
+        image.attr({ src: "", alt: "" }).hide();
+        empty.show();
+        remove.hide();
+      });
+
+      return { wrapper: wrapper, input: input, link: link, callbackName: callbackName, applyImage: applyImage };
+    }
+
     POD_SETTINGS_FIELDS.forEach(function(field) {
+      if (field.type === "image") {
+        var imageField = imagePickerField(field);
+        inputs[field.key] = imageField;
+        container.append(imageField.wrapper);
+        return;
+      }
+
       var wrapper = $("<div>", { "class": "field llm_chat" });
       var inputId = "pod_refinery_relay_" + field.key;
       var label = $("<label>", { "for": inputId, text: field.label });
@@ -217,9 +300,24 @@
     }).then(function(payload) {
       if (!payload || !payload.pod) return;
 
+      if (payload.pod.image_picker_path && inputs.information_image_id) {
+        inputs.information_image_id.link.attr("href", payload.pod.image_picker_path + "?dialog=true&callback=" + encodeURIComponent(inputs.information_image_id.callbackName) + "&width=866&height=510");
+      }
+
       POD_SETTINGS_FIELDS.forEach(function(field) {
         var value = payload.pod[field.key];
-        if (value) inputs[field.key].val(value).trigger("change");
+        if (field.type === "image") {
+          if (payload.pod.information_image_id && payload.pod.information_image_url) {
+            inputs[field.key].input.val(payload.pod.information_image_id).trigger("change");
+            inputs[field.key].applyImage({
+              id: "image_" + payload.pod.information_image_id,
+              src: payload.pod.information_image_url,
+              alt: payload.pod.information_image_alt || "Information card"
+            });
+          }
+        } else if (value) {
+          inputs[field.key].val(value).trigger("change");
+        }
       });
     }).catch(function() {
       // The field defaults remain usable when per-pod storage is unavailable.
