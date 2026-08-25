@@ -31,8 +31,10 @@ module RefineryRelay
     config.to_prepare do
       RefineryRelay::PodRegistration.install!
 
-      if defined?(::Refinery::Pods::Admin::PodsController)
-        controller = ::Refinery::Pods::Admin::PodsController
+      # `to_prepare` may run before classic Rails autoloading has loaded the
+      # Pods admin controller. Resolve it by name so registration works on a
+      # cold boot as well as after a development reload.
+      if (controller = "Refinery::Pods::Admin::PodsController".safe_constantize)
         unless controller.ancestors.include?(RefineryRelay::PodsAdminController)
           controller.prepend(RefineryRelay::PodsAdminController)
         end

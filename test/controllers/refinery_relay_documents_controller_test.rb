@@ -16,15 +16,16 @@ class RefineryRelayDocumentsControllerTest < ActionDispatch::IntegrationTest
     RefineryRelay.reset_configuration!
   end
 
-  test "the gem automatically provides an authenticated documents endpoint" do
+  test "the gem automatically provides an authenticated direct documents endpoint" do
     payload = { "documents" => [], "cursor" => "checkpoint", "next_cursor" => nil }
 
-    feed = ->(feed_url:) do
-      assert_equal "https://refinery.example/nlweb/rss", feed_url
+    feed = ->(cursor:, public_base_url:) do
+      assert_nil cursor
+      assert_equal "https://refinery.example", public_base_url
       payload
     end
 
-    stub_class_method(RefineryRelay::RssDocumentFeed, :call, feed) do
+    stub_class_method(RefineryRelay::DocumentFeed, :call, feed) do
       get DOCUMENTS_PATH, headers: { "Authorization" => "Bearer source-token" }
     end
 
@@ -48,14 +49,14 @@ class RefineryRelayDocumentsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "source_not_configured", response.parsed_body.fetch("error")
   end
 
-  test "returns a controlled error when the RSS feed cannot be fetched" do
-    failure = ->(**) { raise RefineryRelay::RssDocumentFeed::Error, "feed timed out" }
+  test "rejects an invalid direct-feed cursor" do
+    failure = ->(**) { raise RefineryRelay::DocumentFeed::InvalidCursor }
 
-    stub_class_method(RefineryRelay::RssDocumentFeed, :call, failure) do
+    stub_class_method(RefineryRelay::DocumentFeed, :call, failure) do
       get DOCUMENTS_PATH, headers: { "Authorization" => "Bearer source-token" }
     end
 
-    assert_response :bad_gateway
-    assert_equal "rss_feed_unavailable", response.parsed_body.fetch("error")
+    assert_response :unprocessable_entity
+    assert_equal "invalid_cursor", response.parsed_body.fetch("error")
   end
 end

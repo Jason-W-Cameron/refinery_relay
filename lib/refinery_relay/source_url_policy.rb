@@ -5,6 +5,7 @@ require "uri"
 module RefineryRelay
   class SourceUrlPolicy
     HTTP_SCHEMES = %w[http https].freeze
+    LOOPBACK_HOSTS = %w[localhost 127.0.0.1 ::1].freeze
 
     def initialize(base_url:)
       @base_uri = parse_uri(base_url)
@@ -33,11 +34,18 @@ module RefineryRelay
     end
 
     def same_host?(left, right)
-      normalize_host(left.host) == normalize_host(right.host)
+      left_host = normalize_host(left.host)
+      right_host = normalize_host(right.host)
+
+      left_host == right_host || (loopback_host?(left_host) && loopback_host?(right_host))
     end
 
     def normalize_host(host)
-      host.to_s.downcase.sub(/\Awww\./, "")
+      host.to_s.downcase.sub(/\Awww\./, "").delete_prefix("[").delete_suffix("]")
+    end
+
+    def loopback_host?(host)
+      LOOPBACK_HOSTS.include?(host)
     end
 
     def effective_port(uri)

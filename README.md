@@ -97,25 +97,21 @@ background colour, surface colour, and text colour. Supporting colours and contr
 text are derived automatically and shared by all LLM Chat Pods. The generated initializer remains
 the fallback when no admin values have been saved.
 
-## RSS source conversion
+## Direct source feed
 
-The gem converts the host site's `/nlweb/rss` feed into Relay's JSON document format without a
-database migration or a host `routes.rb` change. Configure a private source token:
+The gem converts published Refinery Pages and their associated Pods directly into Relay's
+paginated JSON document format. It does not require or call an `/nlweb/rss` endpoint. Configure a
+private source token:
 
 ```text
 RELAY_SOURCE_TOKEN=replace-with-a-private-token
 ```
 
 The installer adds `GET /refinery_relay/api/relay/documents`. Configure Relay's HTTP
-feed source with that URL and the same bearer token. Each RSS item becomes one Relay document;
-HTML in descriptions is converted to plain searchable text. When a combined feed contains items
-categorized as `Page` or `Pod`, Relay indexes both and ignores other record types. Pod items need
-their own stable RSS GUID and should link to the public page on which they render, since Pods have
-no standalone public route. A host may additionally include Pod text in the owning Page's RSS
-description for backward compatibility. The feed is treated as the public-site snapshot: only HTTP(S) items on
-`RELAY_PUBLIC_BASE_URL` are ingested, and the Relay source should reconcile removed items from
-each full snapshot so unpublished or deleted pages stop being cited. Chat responses also apply
-the same-origin check before rendering a citation link in the browser.
+feed source with that URL and the same bearer token. Each published Page becomes one Relay
+document containing its Page Parts and associated Pod text. Documents use stable `pages:<id>`
+identifiers, are paginated for Relay, and contain the public Page URL for citations. Chat responses
+also apply the same-origin check before rendering a citation link in the browser.
 
 ## Development
 

@@ -544,12 +544,24 @@
       var sourceUrl = new window.URL(url);
       var sourcePort = sourceOrigin.port || (sourceOrigin.protocol === "https:" ? "443" : "80");
       var urlPort = sourceUrl.port || (sourceUrl.protocol === "https:" ? "443" : "80");
-      if (sourceUrl.hostname.replace(/^www\./, "") !== sourceOrigin.hostname.replace(/^www\./, "")) return null;
+      if (!this.sameSourceHost(sourceUrl.hostname, sourceOrigin.hostname)) return null;
       if (urlPort !== sourcePort) return null;
       return url;
     } catch (error) {
       return null;
     }
+  };
+
+  ChatController.prototype.sameSourceHost = function(left, right) {
+    var normalize = function(host) {
+      return String(host || "").toLowerCase().replace(/^www\./, "").replace(/^\[/, "").replace(/\]$/, "");
+    };
+    var leftHost = normalize(left);
+    var rightHost = normalize(right);
+    var loopbackHosts = ["localhost", "127.0.0.1", "::1"];
+
+    return leftHost === rightHost ||
+      (loopbackHosts.indexOf(leftHost) !== -1 && loopbackHosts.indexOf(rightHost) !== -1);
   };
 
   ChatController.prototype.safeAssetUrl = function(value) {

@@ -5,7 +5,6 @@ require "refinery_relay/pod_registration"
 require "refinery_relay/chat_theme"
 require "refinery_relay/source_url_policy"
 require "refinery_relay/pods_admin_controller"
-require "refinery_relay/rss_document_feed"
 require "refinery_relay/engine"
 
 module RefineryRelay

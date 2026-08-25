@@ -4,17 +4,16 @@ module RefineryRelay
   module Api
     module Relay
       class DocumentsController < ActionController::API
-        RSS_PATH = "/nlweb/rss"
-
         before_action :ensure_configured
         before_action :authenticate_source
 
         def index
-          render json: RefineryRelay::RssDocumentFeed.call(
-            feed_url: "#{source_base_url}#{RSS_PATH}"
+          render json: RefineryRelay::DocumentFeed.call(
+            cursor: params[:cursor],
+            public_base_url: source_base_url
           )
-        rescue RefineryRelay::RssDocumentFeed::Error => e
-          render json: { error: "rss_feed_unavailable", message: e.message }, status: :bad_gateway
+        rescue RefineryRelay::DocumentFeed::InvalidCursor
+          render json: { error: "invalid_cursor", message: "cursor is invalid" }, status: :unprocessable_entity
         end
 
         private
