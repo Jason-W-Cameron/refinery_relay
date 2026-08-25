@@ -86,7 +86,7 @@
   background: var(--refinery-relay-background);
   border: 1px solid var(--refinery-relay-border);
   border-radius: 1rem;
-  padding: 2rem;
+  overflow: hidden;
 }
 
 .refinery-relay-chat__information-card p {
@@ -94,6 +94,14 @@
   font-size: 0.9375rem;
   line-height: 1.65;
   margin: 0;
+  padding: 2rem;
+}
+
+.refinery-relay-chat__information-image {
+  display: block;
+  height: clamp(12rem, 24vw, 20rem);
+  object-fit: cover;
+  width: 100%;
 }
 
 .refinery-relay-chat__header {
@@ -837,6 +845,10 @@
   }
 
   .refinery-relay-chat__information-card {
+    padding: 0;
+  }
+
+  .refinery-relay-chat__information-card p {
     padding: 3.5rem;
   }
 

@@ -53,6 +53,36 @@
   resize: vertical;
 }
 
+.refinery-relay-image-picker {
+  margin-top: 0.5em;
+}
+
+.refinery-relay-image-picker__link {
+  align-items: center;
+  border: 1px solid #ccc;
+  display: inline-flex;
+  justify-content: center;
+  min-height: 5em;
+  min-width: 9em;
+  padding: 0.5em;
+  text-decoration: none;
+}
+
+.refinery-relay-image-picker__preview {
+  display: block;
+  max-height: 8em;
+  max-width: 14em;
+}
+
+.refinery-relay-image-picker__empty {
+  color: #666;
+}
+
+.refinery-relay-image-picker__remove {
+  display: block;
+  margin-top: 0.5em;
+}
+
 /* An LLM Chat suggestion only needs its question and the standard controls. */
 .pod-items.llm_chat .refinery-relay-suggestion-table tr:not(.refinery-relay-suggestion-item-header):not(.refinery-relay-suggestion-title-row) {
   display: none;

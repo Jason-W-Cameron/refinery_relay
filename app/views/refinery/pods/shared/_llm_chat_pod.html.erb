@@ -82,8 +82,14 @@
       </div>
 
       <div class="refinery-relay-chat__initial-aside">
-        <aside class="refinery-relay-chat__information-card">
-          <p><%= pod_settings.information_text %></p>
+        <aside class="refinery-relay-chat__information-card<%= " refinery-relay-chat__information-card--image" if pod_settings.information_image_url.present? %>">
+          <% if pod_settings.information_image_url.present? %>
+            <%= image_tag pod_settings.information_image_url,
+                          alt: pod_settings.information_image_alt,
+                          class: "refinery-relay-chat__information-image" %>
+          <% else %>
+            <p><%= pod_settings.information_text %></p>
+          <% end %>
         </aside>
 
         <footer class="refinery-relay-chat__footer">
@@ -142,7 +148,7 @@
         <div class="refinery-relay-chat__typing"
              role="status"
              aria-live="polite"
-             aria-label="Niimble Relay is preparing an answer"
+             aria-label="Generating response"
              data-refinery-relay-typing
              hidden>
           <span class="refinery-relay-chat__typing-dots" aria-hidden="true">
