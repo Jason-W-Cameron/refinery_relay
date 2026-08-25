@@ -98,7 +98,10 @@ The gem automatically provides `GET /refinery_relay/api/relay/documents`. Config
 feed source with that URL and the same bearer token. Each RSS item becomes one Relay document;
 HTML in descriptions is converted to plain searchable text. When a combined feed contains items
 categorized as `Page`, only those Page items are returned; their RSS descriptions can include
-associated Pod content.
+associated Pod content. The feed is treated as the public-site snapshot: only HTTP(S) items on
+`RELAY_PUBLIC_BASE_URL` are ingested, and the Relay source should reconcile removed items from
+each full snapshot so unpublished or deleted pages stop being cited. Chat responses also apply
+the same-origin check before rendering a citation link in the browser.
 
 ## Development
 

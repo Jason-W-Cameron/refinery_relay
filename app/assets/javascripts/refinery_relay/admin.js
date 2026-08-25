@@ -83,6 +83,18 @@
     addPodField("#pod_item_title", "Suggested question");
   }
 
+  function currentPodId() {
+    var hiddenPodId = $("#pod_id").val() || $("input[name='pod[id]']").first().val();
+    if (hiddenPodId) return hiddenPodId;
+
+    var formAction = $("form[action]").filter(function() {
+      return ($(this).attr("action") || "").indexOf("/pods/") !== -1;
+    }).first().attr("action") || "";
+    var locationPath = window.location.pathname || "";
+    var match = (locationPath + " " + formAction).match(/\/pods\/(\d+)(?:\/edit)?(?:[/?#]|$)/);
+    return match ? match[1] : "";
+  }
+
   function prepareThemeFields() {
     var podType = $("#pod_pod_type");
     var podItems = $(".pod-items").last();
@@ -188,7 +200,7 @@
 
     if (typeof window.fetch !== "function") return;
 
-    var podId = $("#pod_id").val() || $("input[name='pod[id]']").first().val();
+    var podId = currentPodId();
     var endpoint = SETTINGS_ENDPOINT + (podId ? "?pod_id=" + encodeURIComponent(podId) : "");
     window.fetch(endpoint, {
       headers: { "Accept": "application/json" },

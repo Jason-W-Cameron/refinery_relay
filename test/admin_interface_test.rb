@@ -30,6 +30,7 @@ class RefineryRelayAdminInterfaceTest < ActiveSupport::TestCase
     assert_includes asset.source, '$(".previews").first'
     assert_includes asset.source, 'podExample.children("div").first'
     assert_includes asset.source, "Re-enable the LLM Chat Pod Example"
+    assert_includes asset.source, "currentPodId"
   end
 
   test "makes the admin preview stylesheet available through the asset pipeline" do

@@ -9,6 +9,7 @@
   suggested_questions = contract.suggested_questions(pod)
   theme = RefineryRelay::ChatTheme.current
   pod_settings = RefineryRelay::PodSettings.for(pod)
+  source_origin = RefineryRelay.configuration.public_base_url.presence || request.base_url
 %>
 
 <section id="<%= chat_id %>"
@@ -18,6 +19,7 @@
          data-chat-url="<%= chat_path %>"
          data-availability-url="<%= availability_path %>"
          data-channel="RefineryRelay::RelayChatChannel"
+         data-source-origin="<%= source_origin %>"
          style="<%= theme.css_variables %>">
   <div class="refinery-relay-chat__initial" data-refinery-relay-view="initial">
     <div class="refinery-relay-chat__initial-layout">

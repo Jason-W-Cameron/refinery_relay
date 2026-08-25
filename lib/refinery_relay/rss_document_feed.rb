@@ -133,7 +133,14 @@ module RefineryRelay
         item_categories(item).any? { |category| category.casecmp("Page").zero? }
       end
 
-      pages.any? ? pages : items
+      selected_items = pages.any? ? pages : items
+      selected_items.select { |item| source_url_policy.allowed?(item_url(item)) }
+    end
+
+    def source_url_policy
+      @source_url_policy ||= RefineryRelay::SourceUrlPolicy.new(
+        base_url: RefineryRelay.configuration.public_base_url.presence || @feed_url
+      )
     end
 
     def item_categories(item)

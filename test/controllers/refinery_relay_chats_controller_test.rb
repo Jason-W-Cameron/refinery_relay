@@ -6,6 +6,14 @@ class RefineryRelayChatsControllerTest < ActionDispatch::IntegrationTest
   CHAT_PATH = "/refinery_relay/api/relay/chat"
   AVAILABILITY_PATH = "/refinery_relay/api/relay/chat/availability"
 
+  setup do
+    RefineryRelay.reset_configuration!
+  end
+
+  teardown do
+    RefineryRelay.reset_configuration!
+  end
+
   test "proxies a browser chat request to Relay" do
     test_case = self
     payload = {
@@ -42,6 +50,34 @@ class RefineryRelayChatsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :unprocessable_entity
     assert_equal "invalid_request", response.parsed_body.fetch("error")
+  end
+
+  test "keeps only citations from the configured public site" do
+    RefineryRelay.configuration.public_base_url = "https://refinery.example"
+    test_case = self
+    payload = {
+      "answer" => "Read the About page [1].",
+      "citations" => [
+        { "title" => "About", "url" => "https://refinery.example/about" },
+        { "title" => "External", "url" => "https://other.example/article" },
+        { "title" => "Unsafe", "url" => "javascript:alert(1)" }
+      ]
+    }
+
+    stub_class_method(RefineryRelay::CreditAvailability, :available?, ->(*) { true }) do
+      stub_class_method(RefineryRelay::ChatClient, :call, lambda { |**|
+        RefineryRelay::ChatClient::Response.new(status: 200, payload: payload)
+      }) do
+        post CHAT_PATH, params: { message: "Where is the about page?" }, as: :json
+      end
+    end
+
+    test_case.assert_response :success
+    assert_equal [
+      { "title" => "About", "url" => "https://refinery.example/about" },
+      nil,
+      nil
+    ], response.parsed_body.fetch("citations")
   end
 
   test "returns unavailable when the shared circuit is open" do
