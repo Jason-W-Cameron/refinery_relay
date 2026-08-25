@@ -473,6 +473,12 @@
         pdfBadge.textContent = "PDF";
         pdfBadge.setAttribute("aria-label", "PDF document");
         link.appendChild(pdfBadge);
+      } else {
+        var sourceBadge = document.createElement("span");
+        sourceBadge.className = "refinery-relay-chat__source-fallback";
+        sourceBadge.textContent = "↗";
+        sourceBadge.setAttribute("aria-hidden", "true");
+        link.appendChild(sourceBadge);
       }
       controller.sourcesTarget.appendChild(link);
     });

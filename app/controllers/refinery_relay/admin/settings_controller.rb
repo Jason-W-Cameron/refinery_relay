@@ -22,7 +22,9 @@ module RefineryRelay
         settings = RefineryRelay::PodSettings.for(refinery_pod)
         {
           prompt_placeholder: settings.prompt_placeholder,
-          information_text: settings.information_text
+          information_text: settings.information_text,
+          footer_logo_url: settings.footer_logo_url,
+          footer_logo_link: settings.footer_logo_link
         }
       end
 

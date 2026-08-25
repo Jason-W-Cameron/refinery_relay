@@ -11,6 +11,8 @@ module RefineryRelay
     POD_SETTINGS_ATTRIBUTES = %w[
       refinery_relay_prompt_placeholder
       refinery_relay_information_text
+      refinery_relay_footer_logo_url
+      refinery_relay_footer_logo_link
     ].freeze
 
     def self.prepended(controller)
@@ -23,9 +25,10 @@ module RefineryRelay
     def pod_params
       pod_parameters = params[:pod]
       if pod_parameters.respond_to?(:permit)
-        @refinery_relay_theme_attributes = pod_parameters.permit(*THEME_ATTRIBUTES).to_h
+        pod_values = pod_parameters.to_unsafe_h
+        @refinery_relay_theme_attributes = pod_values.slice(*THEME_ATTRIBUTES)
         THEME_ATTRIBUTES.each { |attribute| pod_parameters.delete(attribute) }
-        @refinery_relay_pod_settings_attributes = pod_parameters.permit(*POD_SETTINGS_ATTRIBUTES).to_h
+        @refinery_relay_pod_settings_attributes = pod_values.slice(*POD_SETTINGS_ATTRIBUTES)
         POD_SETTINGS_ATTRIBUTES.each { |attribute| pod_parameters.delete(attribute) }
       end
 
@@ -52,6 +55,9 @@ module RefineryRelay
       attributes = @refinery_relay_pod_settings_attributes.transform_keys do |attribute|
         attribute.to_s.delete_prefix("refinery_relay_").to_sym
       end
+      attributes.select! { |attribute, _value| RefineryRelay::PodSettings.column_names.include?(attribute.to_s) }
+      return if attributes.blank?
+
       RefineryRelay::PodSettings.for(@pod).update!(attributes)
     end
   end

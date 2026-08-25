@@ -7,6 +7,8 @@ module RefineryRelay
     DEFAULT_CHAT_SURFACE_COLOR = "#181818"
     DEFAULT_CHAT_TEXT_COLOR = "#f5f5f5"
     DEFAULT_CHAT_PROMPT_PLACEHOLDER = "Ask a question about this organisation's published information…"
+    DEFAULT_CHAT_FOOTER_LOGO_URL = "refinery_relay/niimble-logo-light-tp.png"
+    DEFAULT_CHAT_FOOTER_LOGO_LINK = "https://www.niimble.io"
 
     attr_accessor :source_token,
                   :rss_feed_url,
@@ -21,6 +23,8 @@ module RefineryRelay
                   :chat_surface_color,
                   :chat_text_color,
                   :chat_prompt_placeholder,
+                  :chat_footer_logo_url,
+                  :chat_footer_logo_link,
                   :redis,
                   :broadcaster
 
@@ -38,7 +42,9 @@ module RefineryRelay
         chat_background_color: env.fetch("RELAY_CHAT_BACKGROUND_COLOR", DEFAULT_CHAT_BACKGROUND_COLOR),
         chat_surface_color: env.fetch("RELAY_CHAT_SURFACE_COLOR", DEFAULT_CHAT_SURFACE_COLOR),
         chat_text_color: env.fetch("RELAY_CHAT_TEXT_COLOR", DEFAULT_CHAT_TEXT_COLOR),
-        chat_prompt_placeholder: env.fetch("RELAY_CHAT_PROMPT_PLACEHOLDER", DEFAULT_CHAT_PROMPT_PLACEHOLDER)
+        chat_prompt_placeholder: env.fetch("RELAY_CHAT_PROMPT_PLACEHOLDER", DEFAULT_CHAT_PROMPT_PLACEHOLDER),
+        chat_footer_logo_url: env.fetch("RELAY_CHAT_FOOTER_LOGO_URL", DEFAULT_CHAT_FOOTER_LOGO_URL),
+        chat_footer_logo_link: env.fetch("RELAY_CHAT_FOOTER_LOGO_LINK", DEFAULT_CHAT_FOOTER_LOGO_LINK)
       )
     end
 
@@ -50,6 +56,8 @@ module RefineryRelay
                    chat_surface_color: DEFAULT_CHAT_SURFACE_COLOR,
                    chat_text_color: DEFAULT_CHAT_TEXT_COLOR,
                    chat_prompt_placeholder: DEFAULT_CHAT_PROMPT_PLACEHOLDER,
+                   chat_footer_logo_url: DEFAULT_CHAT_FOOTER_LOGO_URL,
+                   chat_footer_logo_link: DEFAULT_CHAT_FOOTER_LOGO_LINK,
                    redis: nil, broadcaster: nil)
       @source_token = source_token
       @rss_feed_url = rss_feed_url
@@ -64,6 +72,8 @@ module RefineryRelay
       @chat_surface_color = chat_surface_color
       @chat_text_color = chat_text_color
       @chat_prompt_placeholder = chat_prompt_placeholder
+      @chat_footer_logo_url = chat_footer_logo_url
+      @chat_footer_logo_link = chat_footer_logo_link
       @redis = redis
       @broadcaster = broadcaster
     end
@@ -82,6 +92,14 @@ module RefineryRelay
 
     def chat_prompt_placeholder
       @chat_prompt_placeholder.to_s.strip.presence || DEFAULT_CHAT_PROMPT_PLACEHOLDER
+    end
+
+    def chat_footer_logo_url
+      @chat_footer_logo_url.to_s.strip.presence || DEFAULT_CHAT_FOOTER_LOGO_URL
+    end
+
+    def chat_footer_logo_link
+      @chat_footer_logo_link.to_s.strip.presence || DEFAULT_CHAT_FOOTER_LOGO_LINK
     end
 
     def chat_tenant_key

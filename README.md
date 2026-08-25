@@ -67,14 +67,16 @@ end
 ```
 
 The prompt placeholder is also available through `RELAY_CHAT_PROMPT_PLACEHOLDER`.
+The default footer logo and its destination can be overridden with
+`RELAY_CHAT_FOOTER_LOGO_URL` and `RELAY_CHAT_FOOTER_LOGO_LINK`.
 
 The engine registers the `LLM Chat` Pod type. In Refinery admin, the Pod title is the chat
 heading and Pod Item titles are suggested questions. The LLM Chat Pod does not use the generic
 subtitle or body fields.
 
-The `Chat content` section on an LLM Chat Pod controls that pod's prompt placeholder and
-right-hand information card. These values are stored per pod; blank values fall back to the
-initializer placeholder and the built-in information-card copy.
+The `Chat content` section on an LLM Chat Pod controls that pod's prompt placeholder,
+right-hand information card, footer logo image URL, and footer logo link. These values are
+stored per pod; blank values fall back to the initializer defaults.
 
 The chat theme can be configured once per Refinery site in the `Styling` section beneath
 Suggested Questions when editing an `LLM Chat` Pod. The four available values are accent colour,

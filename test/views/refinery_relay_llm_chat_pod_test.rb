@@ -26,14 +26,15 @@ class RefineryRelayLlmChatPodTest < ActionView::TestCase
 
     assert_select "section#refinery-relay-chat-42[data-refinery-relay-chat]" do
       assert_select ".refinery-relay-chat__eyebrow", text: "Niimble Relay"
-      assert_select ".refinery-relay-chat__footer-logo[alt='Niimble']", count: 1
+      assert_select ".refinery-relay-chat__initial-aside .refinery-relay-chat__footer-logo[alt='Niimble']", count: 1
+      assert_select ".refinery-relay-chat__conversation-footer .refinery-relay-chat__footer-logo[alt='Niimble']", count: 1
       assert_select "h2", text: "Ask Simon", count: 2
       assert_select ".refinery-relay-chat__initial-aside > .refinery-relay-chat__information-card", count: 1
       assert_select ".refinery-relay-chat__initial-aside > .refinery-relay-chat__footer", count: 1
-      assert_select ".refinery-relay-chat__attribution", count: 1
-      assert_select ".refinery-relay-chat__attribution > span", text: "Niimble Relay developed by", count: 1
-      assert_select ".refinery-relay-chat__attribution > a[href='https://www.niimble.io'] img[alt='Niimble']", count: 1
-      assert_select ".refinery-relay-chat__attribution > a > span", count: 0
+      assert_select ".refinery-relay-chat__initial-aside .refinery-relay-chat__attribution", count: 1
+      assert_select ".refinery-relay-chat__initial-aside .refinery-relay-chat__attribution > span", text: "Niimble Relay developed by", count: 1
+      assert_select ".refinery-relay-chat__initial-aside .refinery-relay-chat__attribution > a[href='https://www.niimble.io'] img[alt='Niimble']", count: 1
+      assert_select ".refinery-relay-chat__initial-aside .refinery-relay-chat__attribution > a > span", count: 0
       assert_select ".refinery-relay-chat__reset svg", count: 1
       assert_select ".refinery-relay-chat__sources-heading-row", count: 1
       assert_select ".refinery-relay-chat__empty-sources-icon", text: "✦", count: 1
@@ -97,13 +98,17 @@ class RefineryRelayLlmChatPodTest < ActionView::TestCase
     RefineryRelay::PodSettings.create!(
       pod_id: 42,
       prompt_placeholder: "Ask SimonSays anything",
-      information_text: "A custom description for this assistant."
+      information_text: "A custom description for this assistant.",
+      footer_logo_url: "https://example.test/custom-logo.png",
+      footer_logo_link: "https://example.test/about"
     )
 
     render partial: "refinery/pods/shared/llm_chat_pod", locals: { pod: build_pod }
 
     assert_select "textarea[data-refinery-relay-input][placeholder='Ask SimonSays anything']", count: 1
     assert_select ".refinery-relay-chat__information-card p", text: "A custom description for this assistant.", count: 1
+    assert_select ".refinery-relay-chat__initial-aside .refinery-relay-chat__logo-link[href='https://example.test/about'] > img[src='https://example.test/custom-logo.png']", count: 1
+    assert_select ".refinery-relay-chat__conversation-footer .refinery-relay-chat__logo-link[href='https://example.test/about'] > img[src='https://example.test/custom-logo.png']", count: 1
   end
 
   private

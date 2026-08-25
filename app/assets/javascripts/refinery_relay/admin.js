@@ -21,6 +21,18 @@
       label: "Information card",
       type: "textarea",
       defaultValue: "This intelligent assistant is powered by this organisation’s published information. It helps visitors find accurate answers and key information instantly."
+    },
+    {
+      key: "footer_logo_url",
+      label: "Footer logo image URL",
+      type: "text",
+      defaultValue: "refinery_relay/niimble-logo-light-tp.png"
+    },
+    {
+      key: "footer_logo_link",
+      label: "Footer logo link",
+      type: "text",
+      defaultValue: "https://www.niimble.io"
     }
   ];
 
