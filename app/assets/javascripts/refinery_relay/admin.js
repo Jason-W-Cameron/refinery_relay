@@ -279,6 +279,7 @@
     });
 
     (podItems.length ? podItems : podType.closest(".field")).after(container);
+    if (typeof window.init_modal_dialogs === "function") window.init_modal_dialogs();
 
     function syncVisibility() {
       container.toggle(podType.val() === POD_TYPE);
@@ -302,6 +303,7 @@
 
       if (payload.pod.image_picker_path && inputs.information_image_id) {
         inputs.information_image_id.link.attr("href", payload.pod.image_picker_path + "?dialog=true&callback=" + encodeURIComponent(inputs.information_image_id.callbackName) + "&width=866&height=510");
+        if (typeof window.init_modal_dialogs === "function") window.init_modal_dialogs();
       }
 
       POD_SETTINGS_FIELDS.forEach(function(field) {
