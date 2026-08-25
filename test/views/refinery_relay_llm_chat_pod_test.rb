@@ -4,7 +4,7 @@ require "test_helper"
 
 class RefineryRelayLlmChatPodTest < ActionView::TestCase
   PodItem = Data.define(:title, :position)
-  Pod = Data.define(:id, :system_name, :title, :subtitle, :body, :pod_items)
+  Pod = Data.define(:id, :system_name, :title, :pod_items)
 
   class PodItems < Array
     def order(attribute)
@@ -15,8 +15,6 @@ class RefineryRelayLlmChatPodTest < ActionView::TestCase
   test "renders configured chat content and ordered suggested questions" do
     pod = build_pod(
       title: "Ask Simon",
-      subtitle: "What would you like to know?",
-      body: "<p>Answers come from this website.</p><script>alert('unsafe')</script>",
       pod_items: PodItems.new([
         PodItem.new(title: "Second question", position: 2),
         PodItem.new(title: "First question", position: 1),
@@ -27,11 +25,28 @@ class RefineryRelayLlmChatPodTest < ActionView::TestCase
     render partial: "refinery/pods/shared/llm_chat_pod", locals: { pod: pod }
 
     assert_select "section#refinery-relay-chat-42[data-refinery-relay-chat]" do
+      assert_select ".refinery-relay-chat__eyebrow", text: "Niimble Relay"
+      assert_select ".refinery-relay-chat__initial-aside .refinery-relay-chat__footer-logo[alt='Niimble']", count: 1
+      assert_select ".refinery-relay-chat__conversation-footer .refinery-relay-chat__footer-logo[alt='Niimble']", count: 1
       assert_select "h2", text: "Ask Simon", count: 2
-      assert_select ".refinery-relay-chat__welcome", text: "What would you like to know?"
-      assert_select ".refinery-relay-chat__introduction p", text: "Answers come from this website."
-      assert_select "script", count: 0
+      assert_select ".refinery-relay-chat__initial-aside > .refinery-relay-chat__information-card", count: 1
+      assert_select ".refinery-relay-chat__initial-aside > .refinery-relay-chat__footer", count: 1
+      assert_select ".refinery-relay-chat__initial-aside .refinery-relay-chat__attribution", count: 1
+      assert_select ".refinery-relay-chat__initial-aside .refinery-relay-chat__attribution > span", text: "Niimble Relay developed by", count: 1
+      assert_select ".refinery-relay-chat__initial-aside .refinery-relay-chat__attribution > a[href='https://www.niimble.io'] img[alt='Niimble']", count: 1
+      assert_select ".refinery-relay-chat__initial-aside .refinery-relay-chat__attribution > a > span", count: 0
+      assert_select ".refinery-relay-chat__reset svg", count: 1
+      assert_select ".refinery-relay-chat__sources-heading-row", count: 1
+      assert_select ".refinery-relay-chat__empty-sources-icon", text: "✦", count: 1
+      assert_select ".refinery-relay-chat__prompt-icon span", count: 2
+      assert_select ".refinery-relay-chat__send-icon", count: 2
+      assert_select ".refinery-relay-chat__loading-icon", count: 2
+      assert_select ".refinery-relay-chat__form--initial .refinery-relay-chat__send", count: 1
+      assert_select ".refinery-relay-chat__form--conversation .refinery-relay-chat__send--conversation", count: 1
+      assert_select ".refinery-relay-chat__form--conversation .refinery-relay-chat__send-icon path[d='M5 12h14']", count: 1
+      assert_select ".refinery-relay-chat__suggestions-heading", count: 0
       assert_select "button[data-refinery-relay-suggestion]", 2
+      assert_select "form.refinery-relay-chat__form--initial > .refinery-relay-chat__suggestions", count: 1
       assert_select "button[data-refinery-relay-suggestion]:nth-of-type(1)", text: "First question"
       assert_select "button[data-refinery-relay-suggestion]:nth-of-type(2)", text: "Second question"
     end
@@ -61,11 +76,39 @@ class RefineryRelayLlmChatPodTest < ActionView::TestCase
   end
 
   test "uses contract defaults and omits an empty suggestions section" do
-    render partial: "refinery/pods/shared/llm_chat_pod", locals: { pod: build_pod(title: nil, subtitle: nil) }
+    render partial: "refinery/pods/shared/llm_chat_pod", locals: { pod: build_pod(title: nil) }
 
     assert_select "h2", text: "Ask us a question", count: 2
-    assert_select ".refinery-relay-chat__welcome", text: "How can I help?"
     assert_select ".refinery-relay-chat__suggestions", count: 0
+  end
+
+  test "uses the configured prompt placeholder" do
+    RefineryRelay.configure do |configuration|
+      configuration.chat_prompt_placeholder = "Ask Comrades-GPT something"
+    end
+
+    render partial: "refinery/pods/shared/llm_chat_pod", locals: { pod: build_pod }
+
+    assert_select "textarea[data-refinery-relay-input][placeholder='Ask Comrades-GPT something']", count: 1
+  ensure
+    RefineryRelay.reset_configuration!
+  end
+
+  test "uses prompt placeholder and information card copy saved for the pod" do
+    RefineryRelay::PodSettings.create!(
+      pod_id: 42,
+      prompt_placeholder: "Ask SimonSays anything",
+      information_text: "A custom description for this assistant.",
+      footer_logo_url: "https://example.test/custom-logo.png",
+      footer_logo_link: "https://example.test/about"
+    )
+
+    render partial: "refinery/pods/shared/llm_chat_pod", locals: { pod: build_pod }
+
+    assert_select "textarea[data-refinery-relay-input][placeholder='Ask SimonSays anything']", count: 1
+    assert_select ".refinery-relay-chat__information-card p", text: "A custom description for this assistant.", count: 1
+    assert_select ".refinery-relay-chat__initial-aside .refinery-relay-chat__logo-link[href='https://example.test/about'] > img[src='https://example.test/custom-logo.png']", count: 1
+    assert_select ".refinery-relay-chat__conversation-footer .refinery-relay-chat__logo-link[href='https://example.test/about'] > img[src='https://example.test/custom-logo.png']", count: 1
   end
 
   private
@@ -75,8 +118,6 @@ class RefineryRelayLlmChatPodTest < ActionView::TestCase
       id: 42,
       system_name: "llm_chat",
       title: "Ask us a question",
-      subtitle: "How can I help?",
-      body: nil,
       pod_items: PodItems.new
     }.merge(overrides)
 

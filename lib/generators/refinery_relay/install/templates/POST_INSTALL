@@ -6,7 +6,8 @@ Next steps:
      and REDIS_URL in the host environment.
   2. Restart the Rails application so the initializer and Pod registration load.
   3. In Refinery admin, create an LLM Chat Pod and add it to a page.
-  4. Verify the availability endpoint and submit a browser chat request.
+  4. Run `bin/rails db:migrate` to enable the site-wide Styling settings and per-pod Chat content.
+  5. Verify the availability endpoint and submit a browser chat request.
 
 Chat endpoints:
   GET  /refinery_relay/api/relay/chat/availability

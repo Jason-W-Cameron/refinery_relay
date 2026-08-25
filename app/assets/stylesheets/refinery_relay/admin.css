@@ -1,0 +1,63 @@
+/*
+ *= require refinery_relay/chat
+ */
+
+/* The admin preview uses the same chat markup and styles as the public pod. */
+.refinery-relay-admin-preview {
+  max-width: none;
+  width: 100%;
+}
+
+/* Refinery's admin stylesheet applies layout rules that are not present on the public page. */
+.refinery-relay-admin-preview .refinery-relay-chat__initial,
+.refinery-relay-admin-preview .refinery-relay-chat__header,
+.refinery-relay-admin-preview .refinery-relay-chat__suggestions,
+.refinery-relay-admin-preview .refinery-relay-chat__form--initial,
+.refinery-relay-admin-preview .refinery-relay-chat__composer {
+  display: block;
+  width: 100%;
+}
+
+.refinery-relay-admin-preview .refinery-relay-chat__header,
+.refinery-relay-admin-preview .refinery-relay-chat__suggestions,
+.refinery-relay-admin-preview .refinery-relay-chat__form--initial {
+  float: none;
+}
+
+.refinery-relay-admin-preview .refinery-relay-chat__composer {
+  display: flex;
+}
+
+/* Keep custom fields in Refinery's normal form style while making the inputs usable. */
+.refinery-relay-pod-settings-fields {
+  box-sizing: border-box;
+  clear: both;
+  margin: 1.5em 0;
+  max-width: 100%;
+}
+
+.refinery-relay-pod-settings-fields > .field {
+  clear: both;
+  float: none;
+}
+
+.refinery-relay-pod-settings-fields input[type="text"],
+.refinery-relay-pod-settings-fields textarea {
+  box-sizing: border-box;
+  max-width: 100%;
+  width: 100%;
+}
+
+.refinery-relay-pod-settings-fields textarea {
+  min-height: 6em;
+  resize: vertical;
+}
+
+/* An LLM Chat suggestion only needs its question and the standard controls. */
+.pod-items.llm_chat .refinery-relay-suggestion-table tr:not(.refinery-relay-suggestion-item-header):not(.refinery-relay-suggestion-title-row) {
+  display: none;
+}
+
+.pod-items.llm_chat .refinery-relay-suggestion-title-row th {
+  white-space: nowrap;
+}

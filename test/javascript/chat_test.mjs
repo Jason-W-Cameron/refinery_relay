@@ -18,7 +18,7 @@ const window = {
   URL,
   Event,
   Promise,
-  location: { href: "https://refinery.example/about", protocol: "https:" },
+  location: { href: "https://refinery.example/about", origin: "https://refinery.example", protocol: "https:" },
   localStorage: {
     getItem(key) { return storage.get(key) || null },
     setItem(key, value) { storage.set(key, value) },
@@ -37,8 +37,12 @@ function citationController(overrides = {}) {
   return {
     allowInsecureAssets: false,
     domainFor: ChatController.prototype.domainFor,
+    sourceOrigin: "https://refinery.example",
+    safeAssetUrl: ChatController.prototype.safeAssetUrl,
     safeImageUrl: ChatController.prototype.safeImageUrl,
     safeSourceUrl: ChatController.prototype.safeSourceUrl,
+    humanizeContentType: ChatController.prototype.humanizeContentType,
+    titleFromUrl: ChatController.prototype.titleFromUrl,
     ...overrides
   }
 }
@@ -87,9 +91,32 @@ test("rejects unsafe source protocols and only permits HTTP when configured", ()
   assert.equal(ChatController.prototype.safeSourceUrl.call(production, "javascript:alert(1)"), null)
   assert.equal(ChatController.prototype.safeSourceUrl.call(production, "http://cdn.example/image.jpg"), null)
   assert.equal(
-    ChatController.prototype.safeSourceUrl.call(development, "http://cdn.example/image.jpg"),
+    ChatController.prototype.safeAssetUrl.call(development, "http://cdn.example/image.jpg"),
     "http://cdn.example/image.jpg"
   )
+})
+
+test("allows source links only on the configured public site", () => {
+  const controller = citationController()
+
+  assert.equal(
+    ChatController.prototype.safeSourceUrl.call(controller, "https://refinery.example/about"),
+    "https://refinery.example/about"
+  )
+  assert.equal(
+    ChatController.prototype.safeSourceUrl.call(controller, "https://other.example/article"),
+    null
+  )
+})
+
+test("falls back to a readable page name when a citation has no title", () => {
+  const citation = ChatController.prototype.citationViewModel.call(citationController(), {
+    url: "https://refinery.example/about-us/",
+    content_type: "page"
+  })
+
+  assert.equal(citation.title, "About Us")
+  assert.equal(citation.detail, "refinery.example · page")
 })
 
 test("removes redundant uploaded-source Markdown links from answers", () => {

@@ -7,6 +7,7 @@
   var CONTROLLER_KEY = "__refineryRelayChatController";
   var VISITOR_STORAGE_KEY = "niimble-relay-visitor-id";
   var CONVERSATION_STORAGE_KEY = "niimble-relay-conversation-id";
+  var VIEW_TRANSITION_MS = 180;
 
   function toArray(collection) {
     return Array.prototype.slice.call(collection || []);
@@ -30,6 +31,7 @@
     this.chatUrl = element.getAttribute("data-chat-url");
     this.availabilityUrl = element.getAttribute("data-availability-url");
     this.channelName = element.getAttribute("data-channel") || "RefineryRelay::RelayChatChannel";
+    this.sourceOrigin = element.getAttribute("data-source-origin") || window.location.origin;
     this.allowInsecureAssets = element.getAttribute("data-allow-insecure-assets") === "true";
 
     this.initialTarget = element.querySelector("[data-refinery-relay-view='initial']");
@@ -59,6 +61,7 @@
     this.conversationId = this.restoreConversationId();
     this.visitorId = this.restoreVisitorId();
     this.requestSequence = 0;
+    this.transitionSequence = 0;
     this.isLoading = false;
 
     this.forms.forEach(function(form) {
@@ -199,22 +202,56 @@
   };
 
   ChatController.prototype.showConversation = function() {
+    var controller = this;
+    var transitionId = ++this.transitionSequence;
+
     this.unavailableTarget.hidden = true;
-    this.initialTarget.hidden = true;
+    this.initialTarget.classList.add("is-exiting");
     this.conversationTarget.hidden = false;
+    this.conversationTarget.classList.add("is-entering");
+
+    frame(function() {
+      if (transitionId !== controller.transitionSequence) return;
+      controller.conversationTarget.classList.remove("is-entering");
+    });
+
+    window.setTimeout(function() {
+      if (transitionId !== controller.transitionSequence) return;
+      controller.initialTarget.hidden = true;
+      controller.initialTarget.classList.remove("is-exiting");
+    }, VIEW_TRANSITION_MS);
   };
 
   ChatController.prototype.showInitial = function() {
+    var controller = this;
+    var transitionId = ++this.transitionSequence;
+
     this.unavailableTarget.hidden = true;
-    this.conversationTarget.hidden = true;
+    this.conversationTarget.classList.add("is-exiting");
     this.initialTarget.hidden = false;
+    this.initialTarget.classList.add("is-entering");
+
+    frame(function() {
+      if (transitionId !== controller.transitionSequence) return;
+      controller.initialTarget.classList.remove("is-entering");
+    });
+
+    window.setTimeout(function() {
+      if (transitionId !== controller.transitionSequence) return;
+      controller.conversationTarget.hidden = true;
+      controller.conversationTarget.classList.remove("is-exiting");
+    }, VIEW_TRANSITION_MS);
+
     var input = this.initialTarget.querySelector("[data-refinery-relay-input]");
     if (input) input.focus();
   };
 
   ChatController.prototype.showUnavailable = function() {
     this.requestSequence += 1;
+    this.transitionSequence += 1;
     this.setLoading(false);
+    this.initialTarget.classList.remove("is-entering", "is-exiting");
+    this.conversationTarget.classList.remove("is-entering", "is-exiting");
     this.initialTarget.hidden = true;
     this.conversationTarget.hidden = true;
     this.unavailableTarget.hidden = false;
@@ -322,6 +359,7 @@
       var citation = match && citations[Number(match[1]) - 1];
       var href = citation && controller.safeSourceUrl(citation.url);
       if (!href) {
+        if (match) return;
         element.appendChild(document.createTextNode(part));
         return;
       }
@@ -386,10 +424,13 @@
   ChatController.prototype.renderSources = function(citations) {
     var controller = this;
     var sourceCitations = Array.isArray(citations) ? citations : [];
+    var renderedSources = sourceCitations.filter(function(citation) {
+      return controller.citationViewModel(citation).href;
+    });
     clearElement(this.sourcesTarget);
-    this.emptySourcesTarget.hidden = sourceCitations.length > 0;
-    this.sourceCountTarget.textContent = sourceCitations.length ?
-      sourceCitations.length + " " + (sourceCitations.length === 1 ? "reference" : "references") :
+    this.emptySourcesTarget.hidden = renderedSources.length > 0;
+    this.sourceCountTarget.textContent = renderedSources.length ?
+      renderedSources.length + " " + (renderedSources.length === 1 ? "reference" : "references") :
       "No references returned";
 
     sourceCitations.forEach(function(citation) {
@@ -437,6 +478,12 @@
         pdfBadge.textContent = "PDF";
         pdfBadge.setAttribute("aria-label", "PDF document");
         link.appendChild(pdfBadge);
+      } else {
+        var sourceBadge = document.createElement("span");
+        sourceBadge.className = "refinery-relay-chat__source-fallback";
+        sourceBadge.textContent = "↗";
+        sourceBadge.setAttribute("aria-hidden", "true");
+        link.appendChild(sourceBadge);
       }
       controller.sourcesTarget.appendChild(link);
     });
@@ -450,14 +497,14 @@
     var legacyImageUrl = citation.image_url || citation.image || metadata.image_url || metadata.cover_image_url;
     var detail = [
       this.domainFor(citation.url),
-      citation.content_type,
+      this.humanizeContentType(citation.content_type),
       citation.page_number ? "Page " + citation.page_number : null,
       asset && asset.kind === "pdf" && asset.page_count ? asset.page_count + " pages" : null
     ].filter(function(value) { return Boolean(value); }).join(" · ");
 
     return {
       href: this.safeSourceUrl(citation.url),
-      title: citation.title || "Source",
+      title: String(citation.title || "").trim() || this.titleFromUrl(citation.url) || "Source",
       detail: detail || "Source",
       thumbnailUrl: isImage ?
         (this.safeImageUrl(asset.thumbnail_url) || this.safeImageUrl(asset.url)) :
@@ -474,7 +521,7 @@
     var isImage = asset.kind === "image";
 
     return {
-      href: this.safeSourceUrl(source.url),
+      href: this.safeAssetUrl(source.url),
       title: source.title || "Uploaded source",
       thumbnailUrl: isImage ? (this.safeImageUrl(asset.thumbnail_url) || this.safeImageUrl(asset.url)) : null,
       thumbnailAlt: asset.alt_text || asset.caption || source.title || "",
@@ -485,10 +532,27 @@
   };
 
   ChatController.prototype.safeImageUrl = function(value) {
-    return this.safeSourceUrl(value);
+    return this.safeAssetUrl(value);
   };
 
   ChatController.prototype.safeSourceUrl = function(value) {
+    var url = this.safeAssetUrl(value);
+    if (!url) return null;
+
+    try {
+      var sourceOrigin = new window.URL(this.sourceOrigin || window.location.origin);
+      var sourceUrl = new window.URL(url);
+      var sourcePort = sourceOrigin.port || (sourceOrigin.protocol === "https:" ? "443" : "80");
+      var urlPort = sourceUrl.port || (sourceUrl.protocol === "https:" ? "443" : "80");
+      if (sourceUrl.hostname.replace(/^www\./, "") !== sourceOrigin.hostname.replace(/^www\./, "")) return null;
+      if (urlPort !== sourcePort) return null;
+      return url;
+    } catch (error) {
+      return null;
+    }
+  };
+
+  ChatController.prototype.safeAssetUrl = function(value) {
     if (typeof value !== "string" || !value.trim()) return null;
 
     try {
@@ -500,10 +564,34 @@
     }
   };
 
+  ChatController.prototype.humanizeContentType = function(value) {
+    var contentType = String(value || "").replace(/[_-]+/g, " ").trim();
+    return contentType ? contentType.toLowerCase() : null;
+  };
+
+  ChatController.prototype.titleFromUrl = function(value) {
+    if (typeof value !== "string" || !value.trim()) return null;
+
+    try {
+      var path = new window.URL(value).pathname;
+      var segment = path.split("/").filter(Boolean).pop();
+      if (!segment) return "Home";
+
+      segment = decodeURIComponent(segment).replace(/\.[a-z0-9]{2,5}$/i, "");
+      return segment.replace(/[-_]+/g, " ").replace(/\b\w/g, function(letter) {
+        return letter.toUpperCase();
+      });
+    } catch (error) {
+      return null;
+    }
+  };
+
   ChatController.prototype.setLoading = function(loading) {
     this.isLoading = loading;
     this.sendButtons.forEach(function(button) {
       button.disabled = loading;
+      button.setAttribute("aria-busy", loading ? "true" : "false");
+      button.setAttribute("aria-label", loading ? "Sending question" : "Send question");
       if (loading) button.classList.add("is-loading");
       else button.classList.remove("is-loading");
     });

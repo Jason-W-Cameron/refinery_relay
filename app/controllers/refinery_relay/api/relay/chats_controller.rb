@@ -23,7 +23,7 @@ module RefineryRelay
 
           return render_unavailable if credit_limit_exhausted?(result)
 
-          render json: result.payload, status: result.status
+          render json: filter_source_citations(result.payload), status: result.status
         rescue ActionController::ParameterMissing
           render json: { error: "invalid_request", message: "message is required" }, status: :unprocessable_entity
         rescue RefineryRelay::CreditAvailability::CacheUnavailable
@@ -36,6 +36,25 @@ module RefineryRelay
 
         def context_params
           params.fetch(:context, {}).permit(:current_url, :locale, :interface, :interface_type).to_h
+        end
+
+        # Keep citation positions stable so answer markers such as [1] still
+        # refer to the same citation after unsafe or off-site URLs are removed.
+        def filter_source_citations(payload)
+          return payload unless payload.is_a?(Hash) && payload.key?("citations")
+
+          citations = Array(payload["citations"])
+          payload.merge(
+            "citations" => citations.map do |citation|
+              citation if citation.is_a?(Hash) && source_url_policy.allowed?(citation["url"])
+            end
+          )
+        end
+
+        def source_url_policy
+          @source_url_policy ||= RefineryRelay::SourceUrlPolicy.new(
+            base_url: RefineryRelay.configuration.public_base_url.presence || request.base_url
+          )
         end
 
         def credit_limit_exhausted?(result)

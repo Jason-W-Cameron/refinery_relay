@@ -4,7 +4,7 @@ require "test_helper"
 
 class RefineryRelayPodContractTest < ActiveSupport::TestCase
   PodItem = Data.define(:title, :position)
-  Pod = Data.define(:system_name, :title, :subtitle, :body, :pod_items)
+  Pod = Data.define(:system_name, :title, :pod_items)
 
   class PodItems < Array
     def order(attribute)
@@ -20,8 +20,6 @@ class RefineryRelayPodContractTest < ActiveSupport::TestCase
   test "translates Refinery pod fields into chat content" do
     pod = build_pod(
       title: "Chat with Simon",
-      subtitle: "What would you like to know?",
-      body: "Answers are based on this website.",
       pod_items: PodItems.new([
         PodItem.new(title: "Second question", position: 2),
         PodItem.new(title: "First question", position: 1),
@@ -30,16 +28,13 @@ class RefineryRelayPodContractTest < ActiveSupport::TestCase
     )
 
     assert_equal "Chat with Simon", RefineryRelay::PodContract.heading(pod)
-    assert_equal "What would you like to know?", RefineryRelay::PodContract.welcome_message(pod)
-    assert_equal "Answers are based on this website.", RefineryRelay::PodContract.intro_content(pod)
     assert_equal [ "First question", "Second question" ], RefineryRelay::PodContract.suggested_questions(pod)
   end
 
-  test "uses safe copy defaults when optional fields are blank" do
-    pod = build_pod(title: nil, subtitle: "")
+  test "uses a safe copy default when the title is blank" do
+    pod = build_pod(title: nil)
 
     assert_equal "Ask us a question", RefineryRelay::PodContract.heading(pod)
-    assert_equal "How can I help?", RefineryRelay::PodContract.welcome_message(pod)
   end
 
   private
@@ -48,8 +43,6 @@ class RefineryRelayPodContractTest < ActiveSupport::TestCase
     attributes = {
       system_name: "llm_chat",
       title: nil,
-      subtitle: nil,
-      body: nil,
       pod_items: PodItems.new
     }.merge(overrides)
 

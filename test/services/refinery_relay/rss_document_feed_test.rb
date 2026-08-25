@@ -15,6 +15,14 @@ class RefineryRelayRssDocumentFeedTest < ActiveSupport::TestCase
     end
   end
 
+  setup do
+    RefineryRelay.reset_configuration!
+  end
+
+  teardown do
+    RefineryRelay.reset_configuration!
+  end
+
   test "converts a page RSS item and its Pod summary into one Relay document" do
     feed = TestFeed.new(feed_url: "https://example.test/nlweb/rss")
     feed.response = successful_response(rss_body)
@@ -59,6 +67,22 @@ class RefineryRelayRssDocumentFeedTest < ActiveSupport::TestCase
 
     assert_equal 1, documents.size
     assert_equal "About", documents.sole.fetch("title")
+  end
+
+  test "ignores feed items outside the configured public site" do
+    RefineryRelay.configuration.public_base_url = "https://example.test"
+    body = <<~XML
+      <rss><channel>
+        <item><title>About</title><link>https://example.test/about</link><category>Page</category></item>
+        <item><title>External</title><link>https://other.example/article</link><category>Page</category></item>
+      </channel></rss>
+    XML
+    feed = TestFeed.new(feed_url: "https://example.test/feed.rss")
+    feed.response = successful_response(body)
+
+    documents = feed.call.fetch("documents")
+
+    assert_equal ["About"], documents.map { |document| document.fetch("title") }
   end
 
   test "rejects malformed XML" do

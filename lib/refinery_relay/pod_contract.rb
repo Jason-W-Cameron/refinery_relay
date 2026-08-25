@@ -6,7 +6,6 @@ module RefineryRelay
   module PodContract
     POD_TYPE = "llm_chat"
     DEFAULT_HEADING = "Ask us a question"
-    DEFAULT_WELCOME_MESSAGE = "How can I help?"
 
     module_function
 
@@ -16,14 +15,6 @@ module RefineryRelay
 
     def heading(pod)
       pod.title.presence || DEFAULT_HEADING
-    end
-
-    def welcome_message(pod)
-      pod.subtitle.presence || DEFAULT_WELCOME_MESSAGE
-    end
-
-    def intro_content(pod)
-      pod.body
     end
 
     def suggested_questions(pod)

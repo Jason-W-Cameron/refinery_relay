@@ -50,6 +50,8 @@ The installer also adds the engine stylesheet to the host stylesheet manifest:
 
 The stylesheet is scoped beneath `.refinery-relay-chat`. A host can override the theme without
 copying engine CSS by setting the `--refinery-relay-*` custom properties on that root class.
+The chat typography inherits the consuming website's computed font, including its configured
+font stack and loaded webfont.
 The Pod partial does not output separate asset tags, preventing duplicate JavaScript, Action Cable
 subscriptions, or stylesheet requests.
 
@@ -60,12 +62,27 @@ available for optional application-specific overrides:
 ```ruby
 RefineryRelay.configure do |config|
   config.chat_tenant_key = "my-refinery-site"
+  config.chat_prompt_placeholder = "How many Comrades Marathons must I run to get a Green Number?"
 end
 ```
 
+The prompt placeholder is also available through `RELAY_CHAT_PROMPT_PLACEHOLDER`.
+The default footer logo and its destination can be overridden with
+`RELAY_CHAT_FOOTER_LOGO_URL` and `RELAY_CHAT_FOOTER_LOGO_LINK`.
+
 The engine registers the `LLM Chat` Pod type. In Refinery admin, the Pod title is the chat
-heading, subtitle is the welcome message, body is introductory content, and Pod Item titles are
-suggested questions.
+heading and Pod Item titles are suggested questions. The LLM Chat Pod does not use the generic
+subtitle or body fields.
+
+The `Chat content` section on an LLM Chat Pod controls that pod's prompt placeholder,
+right-hand information card, footer logo image URL, and footer logo link. These values are
+stored per pod; blank values fall back to the initializer defaults.
+
+The chat theme can be configured once per Refinery site in the `Styling` section beneath
+Suggested Questions when editing an `LLM Chat` Pod. The four available values are accent colour,
+background colour, surface colour, and text colour. Supporting colours and contrast-safe button
+text are derived automatically and shared by all LLM Chat Pods. The generated initializer remains
+the fallback when no admin values have been saved.
 
 ## RSS source conversion
 
@@ -81,7 +98,10 @@ The gem automatically provides `GET /refinery_relay/api/relay/documents`. Config
 feed source with that URL and the same bearer token. Each RSS item becomes one Relay document;
 HTML in descriptions is converted to plain searchable text. When a combined feed contains items
 categorized as `Page`, only those Page items are returned; their RSS descriptions can include
-associated Pod content.
+associated Pod content. The feed is treated as the public-site snapshot: only HTTP(S) items on
+`RELAY_PUBLIC_BASE_URL` are ingested, and the Relay source should reconcile removed items from
+each full snapshot so unpublished or deleted pages stop being cited. Chat responses also apply
+the same-origin check before rendering a citation link in the browser.
 
 ## Development
 
