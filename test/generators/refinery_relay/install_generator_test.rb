@@ -9,6 +9,12 @@ class RefineryRelayInstallGeneratorTest < Rails::Generators::TestCase
   destination RefineryRelay::Engine.root.join("tmp/install_generator_test")
 
   setup do
+    @environment_before_test = ENV.slice(*RefineryRelay::Generators::InstallGenerator::REQUIRED_ENVIRONMENT_VARIABLES)
+    RefineryRelay::Generators::InstallGenerator::REQUIRED_ENVIRONMENT_VARIABLES.each do |name|
+      ENV[name] = "test-#{name.downcase}"
+    end
+    ENV["REDIS_URL"] = "redis://127.0.0.1:6379/15"
+
     prepare_destination
     write_host_file("config/routes.rb", "Rails.application.routes.draw do\nend\n")
     write_host_file(
@@ -19,6 +25,13 @@ class RefineryRelayInstallGeneratorTest < Rails::Generators::TestCase
       "app/assets/stylesheets/application.scss",
       "/*\n *= require bootstrap\n *= require_self\n */\n\n@import 'pods';\n"
     )
+  end
+
+  teardown do
+    RefineryRelay::Generators::InstallGenerator::REQUIRED_ENVIRONMENT_VARIABLES.each do |name|
+      ENV.delete(name)
+    end
+    @environment_before_test.each { |name, value| ENV[name] = value }
   end
 
   test "installs the Refinery Relay host integration" do
@@ -135,7 +148,29 @@ class RefineryRelayInstallGeneratorTest < Rails::Generators::TestCase
     assert_includes error.message, "consuming Refinery application"
   end
 
+  test "stops before changing the host when required Relay configuration is missing" do
+    ENV.delete("RELAY_CHAT_TOKEN")
+
+    error = assert_raises(Thor::Error) { install_generator.preflight }
+
+    assert_includes error.message, "RELAY_CHAT_TOKEN"
+    assert_not File.exist?(File.join(destination_root, "config/initializers/refinery_relay.rb"))
+  end
+
+  test "stops before changing the host when a Sprockets manifest is missing" do
+    FileUtils.rm_f(File.join(destination_root, "app/assets/javascripts/application.js"))
+
+    error = assert_raises(Thor::Error) { install_generator.preflight }
+
+    assert_includes error.message, "no Sprockets JavaScript manifest"
+    assert_not File.exist?(File.join(destination_root, "config/initializers/refinery_relay.rb"))
+  end
+
   private
+
+  def install_generator
+    RefineryRelay::Generators::InstallGenerator.new([], {}, destination_root: destination_root)
+  end
 
   def write_host_file(path, content)
     absolute_path = File.join(destination_root, path)

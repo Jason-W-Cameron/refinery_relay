@@ -11,6 +11,12 @@ module RefineryRelay
       CHAT_ROUTE = "/refinery_relay/api/relay/chat"
       AVAILABILITY_ROUTE = "#{CHAT_ROUTE}/availability"
       CABLE_MOUNT = 'mount ActionCable.server => "/cable"'
+      REQUIRED_ENVIRONMENT_VARIABLES = %w[
+        REDIS_URL
+        RELAY_CHAT_BASE_URL
+        RELAY_CHAT_TOKEN
+        RELAY_PUBLIC_BASE_URL
+      ].freeze
 
       source_root File.expand_path("templates", __dir__)
 
@@ -23,6 +29,20 @@ module RefineryRelay
 
         raise Thor::Error,
           "Run refinery_relay:install from the consuming Refinery application, not from the refinery_relay gem directory."
+      end
+
+      # Stop before changing the host when its required integration points are
+      # missing. A successful generator run must result in a usable chat Pod,
+      # rather than a partially installed engine that fails later at runtime.
+      def preflight
+        failures = preflight_failures
+        return if failures.empty?
+
+        raise Thor::Error, <<~MESSAGE
+          Refinery Relay cannot be installed:\n\n#{failures.map { |failure| "  - #{failure}" }.join("\n")}
+
+          Fix the listed requirements and run `bin/rails generate refinery_relay:install` again.
+        MESSAGE
       end
 
       def create_initializer
@@ -146,6 +166,37 @@ module RefineryRelay
 
       def destination_content(path)
         File.read(destination_path(path))
+      end
+
+      def preflight_failures
+        failures = []
+        failures << "config/routes.rb is missing" unless destination_file?("config/routes.rb")
+        failures << "the refinerycms-pods gem (~> 1.0) is not installed" unless pods_gem_installed?
+        failures << "the installed refinerycms-pods gem does not expose Refinery::Pods::Pod::POD_TYPES" unless pods_api_available?
+        failures << "the installed refinerycms-pods gem does not expose Refinery::Pods::Admin::PodsController" unless pods_admin_controller_available?
+        failures << "no Sprockets JavaScript manifest was found (expected #{JAVASCRIPT_MANIFESTS.join(", ")})" unless first_existing(JAVASCRIPT_MANIFESTS)
+        failures << "no Sprockets stylesheet manifest was found (expected #{STYLESHEET_MANIFESTS.join(", ")})" unless first_existing(STYLESHEET_MANIFESTS)
+
+        missing_environment = REQUIRED_ENVIRONMENT_VARIABLES.select { |name| ENV[name].to_s.strip.empty? }
+        unless missing_environment.empty?
+          failures << "required environment variables are missing: #{missing_environment.join(", ")}"
+        end
+
+        failures
+      end
+
+      def pods_gem_installed?
+        specification = Gem.loaded_specs["refinerycms-pods"]
+        specification && Gem::Requirement.new("~> 1.0").satisfied_by?(specification.version)
+      end
+
+      def pods_api_available?
+        pod_class = "Refinery::Pods::Pod".safe_constantize
+        pod_class&.const_defined?(:POD_TYPES, false)
+      end
+
+      def pods_admin_controller_available?
+        "Refinery::Pods::Admin::PodsController".safe_constantize.present?
       end
 
       def first_existing(paths)
