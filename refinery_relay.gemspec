@@ -20,6 +20,7 @@ Gem::Specification.new do |spec|
 
   spec.add_dependency "rails", ">= 8.1.3", "< 9"
   spec.add_dependency "refinerycms-core", ">= 4.1", "< 5"
+  spec.add_dependency "refinerycms-pods", "~> 1.0"
   spec.add_dependency "redis", ">= 5.0", "< 7"
 
   spec.add_development_dependency "capybara", ">= 3.40", "< 4"

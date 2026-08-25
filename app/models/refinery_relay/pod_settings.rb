@@ -10,6 +10,7 @@ module RefineryRelay
     TEXT
     DEFAULT_FOOTER_LOGO_URL = RefineryRelay::Configuration::DEFAULT_CHAT_FOOTER_LOGO_URL
     DEFAULT_FOOTER_LOGO_LINK = RefineryRelay::Configuration::DEFAULT_CHAT_FOOTER_LOGO_LINK
+    DEFAULT_TERMS_LINK = RefineryRelay::Configuration::DEFAULT_CHAT_TERMS_LINK
 
     def self.for(pod)
       return new unless pod.respond_to?(:id) && pod.id.present?
@@ -34,6 +35,11 @@ module RefineryRelay
     def footer_logo_link
       value = setting_value(:footer_logo_link).to_s.strip.presence || RefineryRelay.configuration.chat_footer_logo_link
       valid_link?(value) ? value : DEFAULT_FOOTER_LOGO_LINK
+    end
+
+    def terms_link
+      value = setting_value(:terms_link).to_s.strip.presence || RefineryRelay.configuration.chat_terms_link
+      valid_link?(value) ? value : DEFAULT_TERMS_LINK
     end
 
     private

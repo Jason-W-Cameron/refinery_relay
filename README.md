@@ -2,6 +2,14 @@
 
 A Rails engine that adds the Niimble Relay LLM Chat Pod to Refinery CMS applications.
 
+## Requirements
+
+RefineryRelay supports Rails 8.1+ and Refinery CMS 4.1+. It requires the
+`refinerycms-pods` 1.x extension, Sprockets JavaScript and stylesheet manifests,
+Redis, and the `RELAY_CHAT_BASE_URL`, `RELAY_CHAT_TOKEN`, `RELAY_PUBLIC_BASE_URL`,
+and `REDIS_URL` environment variables. The installer checks these requirements
+before it changes the host application.
+
 ## Installation
 
 Add the gem to the host application's Gemfile and run `bundle install`:

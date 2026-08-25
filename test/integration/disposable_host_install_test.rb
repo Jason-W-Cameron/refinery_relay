@@ -15,7 +15,9 @@ class RefineryRelayDisposableHostInstallTest < ActiveSupport::TestCase
       FileUtils.cp_r("#{dummy_root}/.", host_root)
       prepare_uninstalled_host(host_root)
 
-      RefineryRelay::Generators::InstallGenerator.start([], destination_root: host_root)
+      with_relay_environment do
+        RefineryRelay::Generators::InstallGenerator.start([], destination_root: host_root)
+      end
 
       assert_generated_host_files(host_root)
       assert_host_boots(host_root)
@@ -46,6 +48,22 @@ class RefineryRelayDisposableHostInstallTest < ActiveSupport::TestCase
     absolute_path = File.join(host_root, path)
     FileUtils.mkdir_p(File.dirname(absolute_path))
     File.write(absolute_path, content)
+  end
+
+  def with_relay_environment
+    values = {
+      "REDIS_URL" => "redis://127.0.0.1:6379/15",
+      "RELAY_CHAT_BASE_URL" => "https://relay.example",
+      "RELAY_CHAT_TOKEN" => "relay-test-token",
+      "RELAY_PUBLIC_BASE_URL" => "https://refinery.example"
+    }
+    original_values = values.keys.to_h { |key| [ key, ENV[key] ] }
+    ENV.update(values)
+    yield
+  ensure
+    original_values.each do |key, value|
+      value ? ENV[key] = value : ENV.delete(key)
+    end
   end
 
   def assert_generated_host_files(host_root)
@@ -82,7 +100,10 @@ class RefineryRelayDisposableHostInstallTest < ActiveSupport::TestCase
     environment = {
       "BUNDLE_GEMFILE" => RefineryRelay::Engine.root.join("Gemfile").to_s,
       "RAILS_ENV" => "test",
-      "REDIS_URL" => "redis://127.0.0.1:6379/15"
+      "REDIS_URL" => "redis://127.0.0.1:6379/15",
+      "RELAY_CHAT_BASE_URL" => "https://relay.example",
+      "RELAY_CHAT_TOKEN" => "relay-test-token",
+      "RELAY_PUBLIC_BASE_URL" => "https://refinery.example"
     }
     stdout, stderr, status = Open3.capture3(
       environment,

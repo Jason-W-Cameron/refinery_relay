@@ -26,12 +26,20 @@ GIT
       zilch-authorisation (~> 0, >= 0.0.1)
 
 PATH
+  remote: ../../simonsays2021/vendor/extensions/pods
+  specs:
+    refinerycms-pods (1.0)
+      acts_as_indexed (~> 0.8.0)
+      refinerycms-core (~> 4.1.0)
+
+PATH
   remote: .
   specs:
     refinery_relay (0.1.0)
       rails (>= 8.1.3, < 9)
       redis (>= 5.0, < 7)
       refinerycms-core (>= 4.1, < 5)
+      refinerycms-pods (~> 1.0)
 
 GEM
   remote: https://rubygems.org/
@@ -110,6 +118,7 @@ GEM
       securerandom (>= 0.3)
       tzinfo (~> 2.0, >= 2.0.5)
       uri (>= 0.13.1)
+    acts_as_indexed (0.8.3)
     addressable (2.9.0)
       public_suffix (>= 2.0.2, < 8.0)
     ast (2.4.3)
@@ -397,6 +406,7 @@ DEPENDENCIES
   puma
   refinery_relay!
   refinerycms-core!
+  refinerycms-pods!
   rubocop-rails-omakase
   selenium-webdriver (>= 4.6, < 5)
   sqlite3
@@ -414,6 +424,7 @@ CHECKSUMS
   activerecord (8.1.3.1) sha256=0a2fb6c28f4938f6b013a3a549bec0a7e37d535f3dc8990e804bcc3258c0403b
   activestorage (8.1.3.1) sha256=f555254f387b1cffa499d2fd3115d12635eadc5b15206a8534316a67036163ef
   activesupport (8.1.3.1) sha256=85458765f25ea48b9019c46b6bb3fa5683197bf4280d9f06710a6e8d7a831376
+  acts_as_indexed (0.8.3) sha256=7b2506d5f8735591a39ca4b63ec0b31a78963a8e6c79c96c8e802da2290648f3
   addressable (2.9.0) sha256=7fdf6ac3660f7f4e867a0838be3f6cf722ace541dd97767fa42bc6cfa980c7af
   ast (2.4.3) sha256=954615157c1d6a382bc27d690d973195e79db7f55e9765ac7c481c60bdb4d383
   base64 (0.3.0) sha256=27337aeabad6ffae05c265c450490628ef3ebd4b67be58257393227588f5a97b
@@ -495,6 +506,7 @@ CHECKSUMS
   refinery_relay (0.1.0)
   refinerycms-core (4.1.0)
   refinerycms-i18n (5.1.0) sha256=a2136f3a22b2ccca61547f969bf35da97ce09851ebc24e171a0cce3cd161ad05
+  refinerycms-pods (1.0)
   regexp_parser (2.12.0) sha256=35a916a1d63190ab5c9009457136ae5f3c0c7512d60291d0d1378ba18ce08ebb
   reline (0.7.0) sha256=5b012d8e55dbf9d450f12bde2cf7d15ff546ae80b3f8f3b30e570d431815583d
   request_store (1.7.0) sha256=e1b75d5346a315f452242a68c937ef8e48b215b9453a77a6c0acdca2934c88cb

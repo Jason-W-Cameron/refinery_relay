@@ -9,6 +9,7 @@ module RefineryRelay
     DEFAULT_CHAT_PROMPT_PLACEHOLDER = "Ask a question about this organisation's published information…"
     DEFAULT_CHAT_FOOTER_LOGO_URL = "refinery_relay/niimble-logo-light-tp.png"
     DEFAULT_CHAT_FOOTER_LOGO_LINK = "https://www.niimble.io"
+    DEFAULT_CHAT_TERMS_LINK = "https://www.niimble.io/terms"
 
     attr_accessor :source_token,
                   :rss_feed_url,
@@ -25,6 +26,7 @@ module RefineryRelay
                   :chat_prompt_placeholder,
                   :chat_footer_logo_url,
                   :chat_footer_logo_link,
+                  :chat_terms_link,
                   :redis,
                   :broadcaster
 
@@ -44,7 +46,8 @@ module RefineryRelay
         chat_text_color: env.fetch("RELAY_CHAT_TEXT_COLOR", DEFAULT_CHAT_TEXT_COLOR),
         chat_prompt_placeholder: env.fetch("RELAY_CHAT_PROMPT_PLACEHOLDER", DEFAULT_CHAT_PROMPT_PLACEHOLDER),
         chat_footer_logo_url: env.fetch("RELAY_CHAT_FOOTER_LOGO_URL", DEFAULT_CHAT_FOOTER_LOGO_URL),
-        chat_footer_logo_link: env.fetch("RELAY_CHAT_FOOTER_LOGO_LINK", DEFAULT_CHAT_FOOTER_LOGO_LINK)
+        chat_footer_logo_link: env.fetch("RELAY_CHAT_FOOTER_LOGO_LINK", DEFAULT_CHAT_FOOTER_LOGO_LINK),
+        chat_terms_link: env.fetch("RELAY_CHAT_TERMS_LINK", DEFAULT_CHAT_TERMS_LINK)
       )
     end
 
@@ -58,6 +61,7 @@ module RefineryRelay
                    chat_prompt_placeholder: DEFAULT_CHAT_PROMPT_PLACEHOLDER,
                    chat_footer_logo_url: DEFAULT_CHAT_FOOTER_LOGO_URL,
                    chat_footer_logo_link: DEFAULT_CHAT_FOOTER_LOGO_LINK,
+                   chat_terms_link: DEFAULT_CHAT_TERMS_LINK,
                    redis: nil, broadcaster: nil)
       @source_token = source_token
       @rss_feed_url = rss_feed_url
@@ -74,6 +78,7 @@ module RefineryRelay
       @chat_prompt_placeholder = chat_prompt_placeholder
       @chat_footer_logo_url = chat_footer_logo_url
       @chat_footer_logo_link = chat_footer_logo_link
+      @chat_terms_link = chat_terms_link
       @redis = redis
       @broadcaster = broadcaster
     end
@@ -100,6 +105,10 @@ module RefineryRelay
 
     def chat_footer_logo_link
       @chat_footer_logo_link.to_s.strip.presence || DEFAULT_CHAT_FOOTER_LOGO_LINK
+    end
+
+    def chat_terms_link
+      @chat_terms_link.to_s.strip.presence || DEFAULT_CHAT_TERMS_LINK
     end
 
     def chat_tenant_key

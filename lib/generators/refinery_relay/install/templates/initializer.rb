@@ -23,4 +23,5 @@ RefineryRelay.configure do |config|
   # config.chat_prompt_placeholder = "Ask a question about this organisation's published information…"
   # config.chat_footer_logo_url = "refinery_relay/niimble-logo-light-tp.png"
   # config.chat_footer_logo_link = "https://www.niimble.io"
+  # config.chat_terms_link = "https://www.niimble.io/terms"
 end
