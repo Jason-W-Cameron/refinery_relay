@@ -53,10 +53,11 @@ class RefineryRelayRssDocumentFeedTest < ActiveSupport::TestCase
     assert_equal "article", document.fetch("content_type")
   end
 
-  test "converts only Page items when an RSS feed contains mixed content types" do
+  test "converts Page and Pod items when an RSS feed contains mixed content types" do
     body = <<~XML
       <rss><channel>
         <item><title>About</title><link>https://example.test/about</link><category>Page</category></item>
+        <item><title>Opening hours</title><link>https://example.test/about</link><guid>pods:12</guid><category>Pod</category><description>Weekdays from 09:00 to 17:00.</description></item>
         <item><title>News</title><link>https://example.test/news</link><category>Blog Post</category></item>
       </channel></rss>
     XML
@@ -65,8 +66,11 @@ class RefineryRelayRssDocumentFeedTest < ActiveSupport::TestCase
 
     documents = feed.call.fetch("documents")
 
-    assert_equal 1, documents.size
-    assert_equal "About", documents.sole.fetch("title")
+    assert_equal [ "About", "Opening hours" ], documents.map { |document| document.fetch("title") }
+    pod_document = documents.last
+    assert_equal "pod", pod_document.fetch("content_type")
+    assert_equal "https://example.test/about", pod_document.fetch("url")
+    assert_includes pod_document.fetch("content"), "Weekdays from 09:00 to 17:00."
   end
 
   test "ignores feed items outside the configured public site" do

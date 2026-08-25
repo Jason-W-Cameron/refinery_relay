@@ -99,19 +99,20 @@ the fallback when no admin values have been saved.
 
 ## RSS source conversion
 
-The gem can convert an existing RSS or Atom feed into Relay's JSON document format without a
-database migration or a host `routes.rb` change. Configure the feed and a private source token:
+The gem converts the host site's `/nlweb/rss` feed into Relay's JSON document format without a
+database migration or a host `routes.rb` change. Configure a private source token:
 
 ```text
-RELAY_RSS_FEED_URL=https://www.example.com/feed.rss
 RELAY_SOURCE_TOKEN=replace-with-a-private-token
 ```
 
 The installer adds `GET /refinery_relay/api/relay/documents`. Configure Relay's HTTP
 feed source with that URL and the same bearer token. Each RSS item becomes one Relay document;
 HTML in descriptions is converted to plain searchable text. When a combined feed contains items
-categorized as `Page`, only those Page items are returned; their RSS descriptions can include
-associated Pod content. The feed is treated as the public-site snapshot: only HTTP(S) items on
+categorized as `Page` or `Pod`, Relay indexes both and ignores other record types. Pod items need
+their own stable RSS GUID and should link to the public page on which they render, since Pods have
+no standalone public route. A host may additionally include Pod text in the owning Page's RSS
+description for backward compatibility. The feed is treated as the public-site snapshot: only HTTP(S) items on
 `RELAY_PUBLIC_BASE_URL` are ingested, and the Relay source should reconcile removed items from
 each full snapshot so unpublished or deleted pages stop being cited. Chat responses also apply
 the same-origin check before rendering a citation link in the browser.

@@ -4,10 +4,9 @@ require "redis"
 
 # RefineryRelay reads its credentials and defaults from RELAY_* environment
 # variables. Keep credentials in the host environment rather than source control.
-# Set RELAY_RSS_FEED_URL to the site's existing RSS or Atom feed and
-# RELAY_SOURCE_TOKEN to a private token used by Relay when requesting it.
-# The feed should be a complete snapshot of publicly published pages so Relay
-# can remove pages that are later unpublished or deleted.
+# Set RELAY_SOURCE_TOKEN to a private token used by Relay when requesting the
+# site's /nlweb/rss feed. The feed should be a complete snapshot of publicly
+# published pages so Relay can remove pages that are later unpublished or deleted.
 RefineryRelay.configure do |config|
   # A Redis connection is required for shared credit availability state.
   config.redis = Redis.new(url: ENV.fetch("REDIS_URL")) if ENV["REDIS_URL"].present?

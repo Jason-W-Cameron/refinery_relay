@@ -8,7 +8,7 @@ class RefineryRelayDocumentsControllerTest < ActionDispatch::IntegrationTest
   setup do
     RefineryRelay.configure do |config|
       config.source_token = "source-token"
-      config.rss_feed_url = "https://refinery.example/nlweb/rss"
+      config.public_base_url = "https://refinery.example/"
     end
   end
 
@@ -19,7 +19,12 @@ class RefineryRelayDocumentsControllerTest < ActionDispatch::IntegrationTest
   test "the gem automatically provides an authenticated documents endpoint" do
     payload = { "documents" => [], "cursor" => "checkpoint", "next_cursor" => nil }
 
-    stub_class_method(RefineryRelay::RssDocumentFeed, :call, ->(**) { payload }) do
+    feed = ->(feed_url:) do
+      assert_equal "https://refinery.example/nlweb/rss", feed_url
+      payload
+    end
+
+    stub_class_method(RefineryRelay::RssDocumentFeed, :call, feed) do
       get DOCUMENTS_PATH, headers: { "Authorization" => "Bearer source-token" }
     end
 
@@ -34,8 +39,8 @@ class RefineryRelayDocumentsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "unauthorized", response.parsed_body.fetch("error")
   end
 
-  test "stays unavailable until the RSS feed is configured" do
-    RefineryRelay.configuration.rss_feed_url = ""
+  test "stays unavailable until the source token is configured" do
+    RefineryRelay.configuration.source_token = ""
 
     get DOCUMENTS_PATH, headers: { "Authorization" => "Bearer source-token" }
 

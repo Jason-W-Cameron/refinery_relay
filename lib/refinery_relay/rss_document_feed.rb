@@ -12,6 +12,7 @@ module RefineryRelay
 
     MAX_RESPONSE_BYTES = 5 * 1024 * 1024
     MAX_ITEMS = 100
+    INDEXABLE_CATEGORIES = %w[page pod].freeze
 
     def self.call(feed_url:)
       new(feed_url: feed_url).call
@@ -28,7 +29,7 @@ module RefineryRelay
       body = response.body.to_s
       enforce_response_limit!(response, body)
       feed = Nokogiri::XML(body) { |config| config.strict.nonet }
-      items = page_items(item_nodes(feed))
+      items = indexable_items(item_nodes(feed))
       raise Error, "RSS feed contains #{items.size} items; limit the feed to #{MAX_ITEMS} items" if items.size > MAX_ITEMS
 
       documents = items.map { |item| document_for(item, feed) }
@@ -50,7 +51,7 @@ module RefineryRelay
     private
 
     def feed_uri
-      raise Error, "RELAY_RSS_FEED_URL is required" if @feed_url.blank?
+      raise Error, "RSS feed URL is required" if @feed_url.blank?
 
       uri = URI.parse(@feed_url)
       unless %w[http https].include?(uri.scheme) && uri.host.present?
@@ -128,12 +129,17 @@ module RefineryRelay
       clean_text(value)
     end
 
-    def page_items(items)
-      pages = items.select do |item|
-        item_categories(item).any? { |category| category.casecmp("Page").zero? }
+    # A combined Refinery feed can contain arbitrary CMS records. Prefer its
+    # public Pages and Pods, but retain the old all-items behaviour for feeds
+    # that do not label their records with either category.
+    def indexable_items(items)
+      categorized_items = items.select do |item|
+        item_categories(item).any? do |category|
+          INDEXABLE_CATEGORIES.include?(category.to_s.downcase)
+        end
       end
 
-      selected_items = pages.any? ? pages : items
+      selected_items = categorized_items.any? ? categorized_items : items
       selected_items.select { |item| source_url_policy.allowed?(item_url(item)) }
     end
 
