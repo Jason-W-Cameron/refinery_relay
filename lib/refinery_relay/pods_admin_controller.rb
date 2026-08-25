@@ -15,6 +15,7 @@ module RefineryRelay
       refinery_relay_footer_logo_url
       refinery_relay_footer_logo_link
       refinery_relay_terms_link
+      refinery_relay_suggested_questions
     ].freeze
 
     def self.prepended(controller)
@@ -56,6 +57,11 @@ module RefineryRelay
 
       attributes = @refinery_relay_pod_settings_attributes.transform_keys do |attribute|
         attribute.to_s.delete_prefix("refinery_relay_").to_sym
+      end
+      if attributes.key?(:suggested_questions)
+        attributes[:suggested_questions] = attributes[:suggested_questions].to_s.lines.map do |question|
+          question.strip
+        end.reject(&:blank?).uniq
       end
       attributes.select! { |attribute, _value| RefineryRelay::PodSettings.column_names.include?(attribute.to_s) }
       return if attributes.blank?

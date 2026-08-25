@@ -10,6 +10,8 @@ module RefineryRelay
       STYLESHEET_DIRECTIVE = "*= require refinery_relay/application"
       CHAT_ROUTE = "/refinery_relay/api/relay/chat"
       AVAILABILITY_ROUTE = "#{CHAT_ROUTE}/availability"
+      DOCUMENTS_ROUTE = "/refinery_relay/api/relay/documents"
+      ADMIN_SETTINGS_ROUTE = "/refinery_relay/admin/settings"
       CABLE_MOUNT = 'mount ActionCable.server => "/cable"'
       REQUIRED_ENVIRONMENT_VARIABLES = %w[
         REDIS_URL
@@ -62,8 +64,10 @@ module RefineryRelay
         content = destination_content(path)
         availability_installed = route_installed?(content, "get", AVAILABILITY_ROUTE)
         chat_installed = route_installed?(content, "post", CHAT_ROUTE)
+        documents_installed = route_installed?(content, "get", DOCUMENTS_ROUTE)
+        admin_settings_installed = route_installed?(content, "get", ADMIN_SETTINGS_ROUTE)
         cable_installed = cable_mount_installed?(content)
-        if availability_installed && chat_installed && cable_installed
+        if availability_installed && chat_installed && documents_installed && admin_settings_installed && cable_installed
           say_status :identical, path
           return
         end
@@ -79,6 +83,18 @@ module RefineryRelay
           routes << <<~RUBY.chomp
             post "#{CHAT_ROUTE}",
                  to: "refinery_relay/api/relay/chats#create"
+          RUBY
+        end
+        unless documents_installed
+          routes << <<~RUBY.chomp
+            get "#{DOCUMENTS_ROUTE}",
+                to: "refinery_relay/api/relay/documents#index"
+          RUBY
+        end
+        unless admin_settings_installed
+          routes << <<~RUBY.chomp
+            get "#{ADMIN_SETTINGS_ROUTE}",
+                to: "refinery_relay/admin/settings#show"
           RUBY
         end
         routes << CABLE_MOUNT unless cable_installed

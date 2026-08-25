@@ -44,6 +44,13 @@
       label: "Terms & Conditions link",
       type: "text",
       defaultValue: "https://www.niimble.io/terms"
+    },
+    {
+      key: "suggested_questions",
+      label: "Suggested questions",
+      type: "textarea",
+      defaultValue: "",
+      hint: "One question per line."
     }
   ];
 
@@ -58,7 +65,7 @@
   function preparePodForm() {
     if (!$("#pod_pod_type").length) return;
 
-    addPodField("#pod_title", "Chat heading");
+    addPodField($("#pod_title").length ? "#pod_title" : "#pod_name", "Chat heading");
 
     var podItems = $(".pod-items");
     podItems.addClass(POD_TYPE);
@@ -275,6 +282,7 @@
 
       inputs[field.key] = input;
       wrapper.append(label, input);
+      if (field.hint) wrapper.append($("<small>", { text: field.hint }));
       container.append(wrapper);
     });
 

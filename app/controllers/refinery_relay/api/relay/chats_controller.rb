@@ -15,7 +15,7 @@ module RefineryRelay
           return render_unavailable unless conversation_id || RefineryRelay::CreditAvailability.available?
 
           result = RefineryRelay::ChatClient.call(
-            conversation_id:,
+            conversation_id: conversation_id,
             message: params.require(:message).to_s.strip,
             visitor_id: params[:visitor_id],
             context: context_params
@@ -35,7 +35,10 @@ module RefineryRelay
         private
 
         def context_params
-          params.fetch(:context, {}).permit(:current_url, :locale, :interface, :interface_type).to_h
+          context = params[:context]
+          return {} unless context.respond_to?(:permit)
+
+          context.permit(:current_url, :locale, :interface, :interface_type).to_h
         end
 
         # Keep citation positions stable so answer markers such as [1] still

@@ -9,15 +9,17 @@ module RefineryRelay
     class ConfigurationError < StandardError; end
     class UpstreamError < StandardError; end
 
-    Response = Data.define(:status, :payload)
+    Response = Struct.new(:status, :payload, keyword_init: true)
 
-    def self.call(**) = new(**).call
+    def self.call(options)
+      new(options).call
+    end
 
-    def initialize(conversation_id:, message:, visitor_id:, context:)
-      @conversation_id = conversation_id.presence
-      @message = message
-      @visitor_id = visitor_id.presence
-      @context = context
+    def initialize(options)
+      @conversation_id = options[:conversation_id].presence
+      @message = options[:message]
+      @visitor_id = options[:visitor_id].presence
+      @context = options[:context]
     end
 
     def call
@@ -32,7 +34,7 @@ module RefineryRelay
 
       payload = parse_payload(response)
       payload = CitationImageResolver.enrich(payload) if response.is_a?(Net::HTTPSuccess)
-      Response.new(status: response.code.to_i, payload:)
+      Response.new(status: response.code.to_i, payload: payload)
     rescue Net::OpenTimeout, Net::ReadTimeout, SocketError, Errno::ECONNREFUSED, URI::InvalidURIError
       raise UpstreamError, "The Relay chat service is unavailable. Please try again shortly."
     end
@@ -59,10 +61,10 @@ module RefineryRelay
         request["Content-Type"] = "application/json"
         request["Accept"] = "application/json"
         request.body = {
-          conversation_id:,
-          message:,
-          visitor_id:,
-          context:
+          conversation_id: conversation_id,
+          message: message,
+          visitor_id: visitor_id,
+          context: context
         }.compact.to_json
       end
     end

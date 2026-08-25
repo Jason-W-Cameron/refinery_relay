@@ -2,15 +2,6 @@ module RefineryRelay
   class Engine < ::Rails::Engine
     isolate_namespace RefineryRelay
 
-    initializer "refinery_relay.source_route" do |app|
-      app.routes.prepend do
-        get "/refinery_relay/api/relay/documents",
-            to: "refinery_relay/api/relay/documents#index"
-        get "/refinery_relay/admin/settings",
-            to: "refinery_relay/admin/settings#show"
-      end
-    end
-
     initializer "refinery_relay.assets" do |app|
       next unless app.config.respond_to?(:assets)
 
@@ -26,10 +17,13 @@ module RefineryRelay
     config.after_initialize do
       next unless defined?(::Refinery::Core)
 
-      unless ::Refinery::Core.javascripts.include?("refinery_relay/admin")
+      if ::Refinery::Core.respond_to?(:javascripts) &&
+          !::Refinery::Core.javascripts.include?("refinery_relay/admin")
         ::Refinery::Core.config.register_javascript("refinery_relay/admin")
       end
-      unless ::Refinery::Core.config.stylesheets.any? { |stylesheet| stylesheet.path == "refinery_relay/admin" }
+
+      stylesheets = ::Refinery::Core.config.respond_to?(:stylesheets) ? ::Refinery::Core.config.stylesheets : []
+      unless stylesheets.any? { |stylesheet| stylesheet.respond_to?(:path) && stylesheet.path == "refinery_relay/admin" }
         ::Refinery::Core.config.register_stylesheet("refinery_relay/admin")
       end
     end

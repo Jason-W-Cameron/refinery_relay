@@ -14,11 +14,18 @@ module RefineryRelay
       return false unless pod_class
 
       pod_types = pod_class::POD_TYPES
-      return false if pod_types.any? { |entry| entry[1] == POD_TYPE }
+      return false if pod_types.any? { |entry| pod_type_value(entry) == POD_TYPE }
 
-      pod_types << POD_TYPE_OPTION.dup
+      # SIT_V4's pods extension expects an array of plain strings, while newer
+      # releases use [label, value] select options.
+      pod_types << (pod_types.first.is_a?(Array) ? POD_TYPE_OPTION.dup : POD_TYPE)
       true
     end
+
+    def pod_type_value(entry)
+      entry.is_a?(Array) ? entry[1].to_s : entry.to_s
+    end
+    private_class_method :pod_type_value
 
     def default_pod_class
       return unless defined?(::Refinery::Pods::Pod)

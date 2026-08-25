@@ -31,6 +31,7 @@ module RefineryRelay
           footer_logo_url: settings.footer_logo_url,
           footer_logo_link: settings.footer_logo_link,
           terms_link: settings.terms_link,
+          suggested_questions: settings.suggested_questions.join("\n"),
           image_picker_path: image_picker_path
         }
       end

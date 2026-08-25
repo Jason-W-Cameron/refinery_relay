@@ -14,14 +14,19 @@ module RefineryRelay
     end
 
     def heading(pod)
-      pod.title.presence || DEFAULT_HEADING
+      value = pod.title if pod.respond_to?(:title)
+      value = pod.name if value.blank? && pod.respond_to?(:name)
+      value.presence || DEFAULT_HEADING
     end
 
     def suggested_questions(pod)
-      items = pod.pod_items
-      items = items.order(:position) if items.respond_to?(:order)
+      if pod.respond_to?(:pod_items)
+        items = pod.pod_items
+        items = items.order(:position) if items.respond_to?(:order)
+        return Array(items).map { |item| item.title.presence }.compact
+      end
 
-      Array(items).filter_map { |item| item.title.presence }
+      RefineryRelay::PodSettings.for(pod).suggested_questions
     end
   end
 end

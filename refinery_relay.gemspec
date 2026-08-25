@@ -16,13 +16,17 @@ Gem::Specification.new do |spec|
     Dir["{app,config,db,lib}/**/*", "MIT-LICENSE", "Rakefile", "README.md"]
   end
 
-  spec.required_ruby_version = ">= 3.2"
+  # This branch supports the legacy Refinery/SIT_V4 stack. Keep these bounds
+  # narrow so Bundler cannot accidentally upgrade the host application.
+  spec.required_ruby_version = ">= 2.5", "< 2.6"
 
-  spec.add_dependency "rails", ">= 8.1.3", "< 9"
-  spec.add_dependency "refinerycms-core", ">= 4.1", "< 5"
+  spec.add_dependency "rails", ">= 5.1.7", "< 5.2"
+  spec.add_dependency "refinerycms-core", ">= 4.0.3", "< 4.1"
   spec.add_dependency "refinerycms-pods", "~> 1.0"
-  spec.add_dependency "redis", ">= 5.0", "< 7"
+  spec.add_dependency "redis", "~> 4.8"
+  spec.add_dependency "nokogiri", ">= 1.8", "< 1.14"
 
-  spec.add_development_dependency "capybara", ">= 3.40", "< 4"
-  spec.add_development_dependency "selenium-webdriver", ">= 4.6", "< 5"
+  spec.add_development_dependency "capybara", "~> 3.24"
+  spec.add_development_dependency "selenium-webdriver", "~> 3.142.3"
+  spec.add_development_dependency "ffi", "~> 1.11.1"
 end

@@ -12,6 +12,8 @@ module RefineryRelay
     DEFAULT_FOOTER_LOGO_LINK = RefineryRelay::Configuration::DEFAULT_CHAT_FOOTER_LOGO_LINK
     DEFAULT_TERMS_LINK = RefineryRelay::Configuration::DEFAULT_CHAT_TERMS_LINK
 
+    serialize :suggested_questions, Array
+
     def self.for(pod)
       return new unless pod.respond_to?(:id) && pod.id.present?
       return new unless connection.data_source_exists?(table_name)
@@ -59,6 +61,12 @@ module RefineryRelay
     def terms_link
       value = setting_value(:terms_link).to_s.strip.presence || RefineryRelay.configuration.chat_terms_link
       valid_link?(value) ? value : DEFAULT_TERMS_LINK
+    end
+
+    def suggested_questions
+      return [] unless has_attribute?(:suggested_questions)
+
+      Array(self[:suggested_questions]).map { |question| question.to_s.strip.presence }.compact
     end
 
     private

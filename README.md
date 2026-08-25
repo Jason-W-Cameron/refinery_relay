@@ -4,7 +4,8 @@ A Rails engine that adds the Niimble Relay LLM Chat Pod to Refinery CMS applicat
 
 ## Requirements
 
-RefineryRelay supports Rails 8.1+ and Refinery CMS 4.1+. It requires the
+This compatibility branch supports Ruby 2.5.7, Rails 5.1.7, and Refinery CMS
+4.0.3. It requires the
 `refinerycms-pods` 1.x extension, Sprockets JavaScript and stylesheet manifests,
 Redis, and the `RELAY_CHAT_BASE_URL`, `RELAY_CHAT_TOKEN`, `RELAY_PUBLIC_BASE_URL`,
 and `REDIS_URL` environment variables. The installer checks these requirements
@@ -15,7 +16,7 @@ before it changes the host application.
 Add the gem to the host application's Gemfile and run `bundle install`:
 
 ```ruby
-gem "refinery_relay"
+gem "refinery_relay", path: "../gems/refinery_relay"
 ```
 
 Run the installer from the consuming Refinery application:
@@ -39,6 +40,10 @@ get "/refinery_relay/api/relay/chat/availability",
     to: "refinery_relay/api/relay/chats#availability"
 post "/refinery_relay/api/relay/chat",
      to: "refinery_relay/api/relay/chats#create"
+get "/refinery_relay/api/relay/documents",
+    to: "refinery_relay/api/relay/documents#index"
+get "/refinery_relay/admin/settings",
+    to: "refinery_relay/admin/settings#show"
 ```
 
 The installer loads the browser controller globally so Swup and other partial-page navigation
@@ -78,9 +83,9 @@ The prompt placeholder is also available through `RELAY_CHAT_PROMPT_PLACEHOLDER`
 The default footer logo and its destination can be overridden with
 `RELAY_CHAT_FOOTER_LOGO_URL` and `RELAY_CHAT_FOOTER_LOGO_LINK`.
 
-The engine registers the `LLM Chat` Pod type. In Refinery admin, the Pod title is the chat
-heading and Pod Item titles are suggested questions. The LLM Chat Pod does not use the generic
-subtitle or body fields.
+The engine registers the `LLM Chat` Pod type. In SIT_V4's Refinery admin, the Pod name is the
+chat heading and suggested questions are entered one per line in the Relay Chat content section.
+The LLM Chat Pod does not use the generic subtitle or body fields.
 
 The `Chat content` section on an LLM Chat Pod controls that pod's prompt placeholder,
 right-hand information card, footer logo image URL, and footer logo link. These values are
@@ -102,7 +107,7 @@ RELAY_RSS_FEED_URL=https://www.example.com/feed.rss
 RELAY_SOURCE_TOKEN=replace-with-a-private-token
 ```
 
-The gem automatically provides `GET /refinery_relay/api/relay/documents`. Configure Relay's HTTP
+The installer adds `GET /refinery_relay/api/relay/documents`. Configure Relay's HTTP
 feed source with that URL and the same bearer token. Each RSS item becomes one Relay document;
 HTML in descriptions is converted to plain searchable text. When a combined feed contains items
 categorized as `Page`, only those Page items are returned; their RSS descriptions can include

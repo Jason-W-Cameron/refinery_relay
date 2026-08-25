@@ -9,7 +9,7 @@ module RefineryRelay
   # cannot reliably read another page's <meta property="og:image"> tags.
   class CitationImageResolver
     MAX_CITATIONS = 6
-    CACHE_TTL = 12.hours
+    CACHE_TTL = 12 * 60 * 60
     OPEN_TIMEOUT = 1
     READ_TIMEOUT = 2
 
@@ -70,7 +70,7 @@ module RefineryRelay
       end
       return unless response.is_a?(Net::HTTPSuccess) && response["content-type"].to_s.include?("html")
 
-      meta_tags = response.body.to_s.byteslice(0, 128.kilobytes).scan(/<meta\b[^>]*>/i)
+      meta_tags = response.body.to_s.byteslice(0, 128 * 1024).scan(/<meta\b[^>]*>/i)
       image_tag = meta_tags.find { |tag| tag.match?(/\b(?:property|name)\s*=\s*["'](?:og:image|twitter:image)["']/i) }
       image_url = html_attribute(image_tag, "content")
       return if image_url.blank?
