@@ -20,6 +20,8 @@ module RefineryRelay
 
       def pod_settings_payload
         settings = RefineryRelay::PodSettings.for(refinery_pod)
+        image_picker_path = refinery.insert_admin_images_path if refinery.respond_to?(:insert_admin_images_path)
+
         {
           prompt_placeholder: settings.prompt_placeholder,
           information_text: settings.information_text,
@@ -29,7 +31,7 @@ module RefineryRelay
           footer_logo_url: settings.footer_logo_url,
           footer_logo_link: settings.footer_logo_link,
           terms_link: settings.terms_link,
-          image_picker_path: refinery.insert_admin_images_path
+          image_picker_path: image_picker_path
         }
       end
 

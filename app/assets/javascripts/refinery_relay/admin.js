@@ -279,7 +279,10 @@
     });
 
     (podItems.length ? podItems : podType.closest(".field")).after(container);
-    if (typeof window.init_modal_dialogs === "function") window.init_modal_dialogs();
+
+    function initializeImagePickerDialogs() {
+      if (typeof window.init_modal_dialogs === "function") window.init_modal_dialogs();
+    }
 
     function syncVisibility() {
       container.toggle(podType.val() === POD_TYPE);
@@ -299,11 +302,13 @@
     }).then(function(response) {
       return response.ok ? response.json() : null;
     }).then(function(payload) {
-      if (!payload || !payload.pod) return;
+      if (!payload || !payload.pod) {
+        initializeImagePickerDialogs();
+        return;
+      }
 
       if (payload.pod.image_picker_path && inputs.information_image_id) {
         inputs.information_image_id.link.attr("href", payload.pod.image_picker_path + "?dialog=true&callback=" + encodeURIComponent(inputs.information_image_id.callbackName) + "&width=866&height=510");
-        if (typeof window.init_modal_dialogs === "function") window.init_modal_dialogs();
       }
 
       POD_SETTINGS_FIELDS.forEach(function(field) {
@@ -321,8 +326,10 @@
           inputs[field.key].val(value).trigger("change");
         }
       });
+      initializeImagePickerDialogs();
     }).catch(function() {
       // The field defaults remain usable when per-pod storage is unavailable.
+      initializeImagePickerDialogs();
     });
   }
 
