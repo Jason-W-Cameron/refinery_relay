@@ -100,8 +100,10 @@ the fallback when no admin values have been saved.
 ## Direct source feed
 
 The gem converts published Refinery Pages and their associated Pods directly into Relay's
-paginated JSON document format. It does not require or call an `/nlweb/rss` endpoint. Configure a
-private source token:
+paginated JSON document format. It does not require or call an `/nlweb/rss` endpoint. It includes
+structured page/Pod text plus linked Refinery images and resources as Relay citation assets. A
+page delete or unpublish is retained as an explicit feed tombstone, so Relay removes it instead of
+mistaking an absent record for unchanged content. Configure a private source token:
 
 ```text
 RELAY_SOURCE_TOKEN=replace-with-a-private-token
@@ -112,6 +114,19 @@ feed source with that URL and the same bearer token. Each published Page becomes
 document containing its Page Parts and associated Pod text. Documents use stable `pages:<id>`
 identifiers, are paginated for Relay, and contain the public Page URL for citations. Chat responses
 also apply the same-origin check before rendering a citation link in the browser.
+
+To request an immediate re-read after content changes, also configure Relay's source-sync
+credential and the source UUID shown in the Relay console:
+
+```text
+RELAY_SYNC_TOKEN=sync-write-credential
+RELAY_SOURCE_ID=relay-source-uuid
+```
+
+`RELAY_SYNC_BASE_URL` is optional and defaults to `RELAY_CHAT_BASE_URL`. The gem queues a
+`POST /api/v1/sources/:source_id/sync` only after a Page, Page Part, Pod, Image, or Resource
+transaction commits. Relay's normal polling remains the safety net if the source application or
+Relay is temporarily unavailable.
 
 ## Development
 

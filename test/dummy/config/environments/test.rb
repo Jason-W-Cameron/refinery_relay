@@ -6,8 +6,10 @@
 Rails.application.configure do
   # Settings specified here will take precedence over those in config/application.rb.
 
+  config.secret_key_base = "refinery-relay-test-secret-key-base"
+
   # While tests run files are not watched, reloading is not necessary.
-  config.enable_reloading = false
+  config.cache_classes = true
 
   # Eager loading loads your entire application. When running a single test locally,
   # this is usually not necessary, and can slow down your test suite. However, it's
@@ -22,8 +24,8 @@ Rails.application.configure do
   config.consider_all_requests_local = true
   config.cache_store = :null_store
 
-  # Render exception templates for rescuable exceptions and raise for other exceptions.
-  config.action_dispatch.show_exceptions = :rescuable
+  # Raise application errors directly in tests.
+  config.action_dispatch.show_exceptions = false
 
   # Disable request forgery protection in test environment.
   config.action_controller.allow_forgery_protection = false
@@ -36,30 +38,6 @@ Rails.application.configure do
     %r{\Ahttps?://127\.0\.0\.1:\d+\z}
   ]
   config.action_cable.disable_request_forgery_protection = true
-
-  # Rails 8 loads the Sprockets environment, but this Refinery dummy host can
-  # draw its application routes after Sprockets' automatic mount. Add an
-  # explicit wildcard endpoint so Capybara can load the engine JavaScript and
-  # stylesheet during system tests.
-  config.after_initialize do |app|
-    asset_prefix = app.config.assets.prefix
-    asset_route_present = app.routes.routes.any? do |route|
-      route.path.spec.to_s == "#{asset_prefix}/*path"
-    end
-    unless asset_route_present
-      asset_server = lambda do |env|
-        asset_env = env.dup
-        asset_env["PATH_INFO"] = env["PATH_INFO"].delete_prefix(asset_prefix)
-        app.assets.call(asset_env)
-      end
-      app.routes.prepend do
-        match "#{asset_prefix}/*path", to: asset_server, via: :all
-      end
-    end
-  end
-
-  # Store uploaded files on the local file system in a temporary directory.
-  config.active_storage.service = :test
 
   # Tell Action Mailer not to deliver emails to the real world.
   # The :test delivery method accumulates sent emails in the
@@ -78,6 +56,4 @@ Rails.application.configure do
   # Annotate rendered view with file names.
   # config.action_view.annotate_rendered_view_with_filenames = true
 
-  # Raise error when a before_action's only/except options reference missing actions.
-  config.action_controller.raise_on_missing_callback_actions = true
 end

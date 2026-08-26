@@ -9,7 +9,9 @@ class RefineryRelayInstallGeneratorTest < Rails::Generators::TestCase
   destination RefineryRelay::Engine.root.join("tmp/install_generator_test")
 
   setup do
-    @environment_before_test = ENV.slice(*RefineryRelay::Generators::InstallGenerator::REQUIRED_ENVIRONMENT_VARIABLES)
+    @environment_before_test = RefineryRelay::Generators::InstallGenerator::REQUIRED_ENVIRONMENT_VARIABLES.each_with_object({}) do |name, values|
+      values[name] = ENV[name]
+    end
     RefineryRelay::Generators::InstallGenerator::REQUIRED_ENVIRONMENT_VARIABLES.each do |name|
       ENV[name] = "test-#{name.downcase}"
     end
@@ -31,7 +33,9 @@ class RefineryRelayInstallGeneratorTest < Rails::Generators::TestCase
     RefineryRelay::Generators::InstallGenerator::REQUIRED_ENVIRONMENT_VARIABLES.each do |name|
       ENV.delete(name)
     end
-    @environment_before_test.each { |name, value| ENV[name] = value }
+    @environment_before_test.each do |name, value|
+      value ? ENV[name] = value : ENV.delete(name)
+    end
   end
 
   test "installs the Refinery Relay host integration" do

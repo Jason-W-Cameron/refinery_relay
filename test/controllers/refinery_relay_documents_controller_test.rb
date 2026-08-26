@@ -18,10 +18,11 @@ class RefineryRelayDocumentsControllerTest < ActionDispatch::IntegrationTest
 
   test "the gem automatically provides an authenticated direct documents endpoint" do
     payload = { "documents" => [], "cursor" => "checkpoint", "next_cursor" => nil }
+    test_case = self
 
     feed = ->(cursor:, public_base_url:) do
-      assert_nil cursor
-      assert_equal "https://refinery.example", public_base_url
+      test_case.assert_nil cursor
+      test_case.assert_equal "https://refinery.example", public_base_url
       payload
     end
 

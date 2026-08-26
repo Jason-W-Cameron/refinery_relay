@@ -6,6 +6,9 @@ require "redis"
 # variables. Keep credentials in the host environment rather than source control.
 # Set RELAY_SOURCE_TOKEN to a private token used by Relay when requesting the
 # direct feed of published Refinery Pages and their associated Pods.
+# Set RELAY_SYNC_TOKEN and RELAY_SOURCE_ID as well to notify Relay immediately
+# after a committed Refinery content change. RELAY_SYNC_BASE_URL defaults to
+# RELAY_CHAT_BASE_URL when Relay serves both APIs.
 RefineryRelay.configure do |config|
   # A Redis connection is required for shared credit availability state.
   config.redis = Redis.new(url: ENV.fetch("REDIS_URL")) if ENV["REDIS_URL"].present?

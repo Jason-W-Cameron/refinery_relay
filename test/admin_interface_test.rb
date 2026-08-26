@@ -16,8 +16,9 @@ class RefineryRelayAdminInterfaceTest < ActiveSupport::TestCase
     end
 
     assert callback
-    skip_filter = callback.instance_variable_get(:@unless).first
-    assert_includes skip_filter.instance_variable_get(:@actions), "show"
+    assert callback.instance_variable_get(:@unless).any?
+    assert_includes File.read(RefineryRelay::Engine.root.join("app/controllers/refinery_relay/admin/settings_controller.rb")),
+                    "skip_before_action :restrict_controller, only: :show"
   end
 
   test "makes the admin JavaScript available through the asset pipeline" do

@@ -2,6 +2,8 @@ module RefineryRelay
   class Configuration
     DEFAULT_CHAT_OPEN_TIMEOUT_SECONDS = 5
     DEFAULT_CHAT_READ_TIMEOUT_SECONDS = 45
+    DEFAULT_SYNC_OPEN_TIMEOUT_SECONDS = 5
+    DEFAULT_SYNC_READ_TIMEOUT_SECONDS = 20
     DEFAULT_CHAT_ACCENT_COLOR = "#fbbf24"
     DEFAULT_CHAT_BACKGROUND_COLOR = "#101010"
     DEFAULT_CHAT_SURFACE_COLOR = "#181818"
@@ -16,9 +18,14 @@ module RefineryRelay
                   :public_base_url,
                   :chat_base_url,
                   :chat_token,
+                  :sync_token,
+                  :sync_source_id,
+                  :sync_base_url,
                   :chat_tenant_key,
                   :chat_open_timeout_seconds,
                   :chat_read_timeout_seconds,
+                  :sync_open_timeout_seconds,
+                  :sync_read_timeout_seconds,
                   :chat_accent_color,
                   :chat_background_color,
                   :chat_surface_color,
@@ -37,9 +44,14 @@ module RefineryRelay
         public_base_url: env.fetch("RELAY_PUBLIC_BASE_URL", ""),
         chat_base_url: env.fetch("RELAY_CHAT_BASE_URL", ""),
         chat_token: env["RELAY_CHAT_TOKEN"],
+        sync_token: env["RELAY_SYNC_TOKEN"],
+        sync_source_id: env["RELAY_SOURCE_ID"],
+        sync_base_url: env.fetch("RELAY_SYNC_BASE_URL", env.fetch("RELAY_CHAT_BASE_URL", "")),
         chat_tenant_key: env.fetch("RELAY_CHAT_TENANT_KEY", "refinery"),
         chat_open_timeout_seconds: env.fetch("RELAY_CHAT_OPEN_TIMEOUT_SECONDS", DEFAULT_CHAT_OPEN_TIMEOUT_SECONDS),
         chat_read_timeout_seconds: env.fetch("RELAY_CHAT_READ_TIMEOUT_SECONDS", DEFAULT_CHAT_READ_TIMEOUT_SECONDS),
+        sync_open_timeout_seconds: env.fetch("RELAY_SYNC_OPEN_TIMEOUT_SECONDS", DEFAULT_SYNC_OPEN_TIMEOUT_SECONDS),
+        sync_read_timeout_seconds: env.fetch("RELAY_SYNC_READ_TIMEOUT_SECONDS", DEFAULT_SYNC_READ_TIMEOUT_SECONDS),
         chat_accent_color: env.fetch("RELAY_CHAT_ACCENT_COLOR", DEFAULT_CHAT_ACCENT_COLOR),
         chat_background_color: env.fetch("RELAY_CHAT_BACKGROUND_COLOR", DEFAULT_CHAT_BACKGROUND_COLOR),
         chat_surface_color: env.fetch("RELAY_CHAT_SURFACE_COLOR", DEFAULT_CHAT_SURFACE_COLOR),
@@ -53,8 +65,11 @@ module RefineryRelay
     end
 
     def initialize(source_token: nil, public_base_url: "", chat_base_url: "", chat_token: nil,
+                   sync_token: nil, sync_source_id: nil, sync_base_url: "",
                    chat_tenant_key: "refinery", chat_open_timeout_seconds: DEFAULT_CHAT_OPEN_TIMEOUT_SECONDS,
                    chat_read_timeout_seconds: DEFAULT_CHAT_READ_TIMEOUT_SECONDS,
+                   sync_open_timeout_seconds: DEFAULT_SYNC_OPEN_TIMEOUT_SECONDS,
+                   sync_read_timeout_seconds: DEFAULT_SYNC_READ_TIMEOUT_SECONDS,
                    chat_accent_color: DEFAULT_CHAT_ACCENT_COLOR,
                    chat_background_color: DEFAULT_CHAT_BACKGROUND_COLOR,
                    chat_surface_color: DEFAULT_CHAT_SURFACE_COLOR,
@@ -69,9 +84,14 @@ module RefineryRelay
       @public_base_url = public_base_url
       @chat_base_url = chat_base_url
       @chat_token = chat_token
+      @sync_token = sync_token
+      @sync_source_id = sync_source_id
+      @sync_base_url = sync_base_url
       @chat_tenant_key = chat_tenant_key
       @chat_open_timeout_seconds = chat_open_timeout_seconds
       @chat_read_timeout_seconds = chat_read_timeout_seconds
+      @sync_open_timeout_seconds = sync_open_timeout_seconds
+      @sync_read_timeout_seconds = sync_read_timeout_seconds
       @chat_accent_color = chat_accent_color
       @chat_background_color = chat_background_color
       @chat_surface_color = chat_surface_color
@@ -91,6 +111,14 @@ module RefineryRelay
 
     def chat_base_url
       strip_trailing_slashes(@chat_base_url)
+    end
+
+    def sync_base_url
+      strip_trailing_slashes(@sync_base_url.presence || @chat_base_url)
+    end
+
+    def sync_configured?
+      sync_base_url.present? && sync_token.present? && sync_source_id.present?
     end
 
     def chat_prompt_placeholder
@@ -119,6 +147,14 @@ module RefineryRelay
 
     def chat_read_timeout_seconds
       bounded_integer(@chat_read_timeout_seconds, default: DEFAULT_CHAT_READ_TIMEOUT_SECONDS, min: 1, max: 120)
+    end
+
+    def sync_open_timeout_seconds
+      bounded_integer(@sync_open_timeout_seconds, default: DEFAULT_SYNC_OPEN_TIMEOUT_SECONDS, min: 1, max: 30)
+    end
+
+    def sync_read_timeout_seconds
+      bounded_integer(@sync_read_timeout_seconds, default: DEFAULT_SYNC_READ_TIMEOUT_SECONDS, min: 1, max: 30)
     end
 
     private

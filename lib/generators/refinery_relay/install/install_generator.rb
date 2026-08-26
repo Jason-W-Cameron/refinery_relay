@@ -170,6 +170,14 @@ module RefineryRelay
                   "db/migrate/#{timestamp}_add_assistant_response_color_to_refinery_relay_site_settings.rb"
       end
 
+      def install_source_tombstones_migration
+        return if Dir.glob(destination_path("db/migrate/*_create_refinery_relay_source_tombstones.rb")).any?
+
+        timestamp = (Time.now.utc + 6).strftime("%Y%m%d%H%M%S")
+        copy_file "create_refinery_relay_source_tombstones.rb",
+                  "db/migrate/#{timestamp}_create_refinery_relay_source_tombstones.rb"
+      end
+
       def show_post_install_steps
         readme "POST_INSTALL"
       end

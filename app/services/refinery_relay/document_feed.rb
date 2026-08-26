@@ -17,6 +17,9 @@ module RefineryRelay
     DEFAULT_PAGE_SIZE = 25
     MAX_PAGE_SIZE = 100
     POD_TEXT_FIELDS = %w[body body2 body3 hidden_body].freeze
+    PAGE_IMAGE_FIELDS = %i[footer_image footer_mobile_image].freeze
+    POD_IMAGE_FIELDS = %i[image mobile_image image2 image3 background_image].freeze
+    POD_FILE_FIELDS = %i[file file2].freeze
 
     class InvalidCursor < StandardError; end
 
@@ -32,19 +35,13 @@ module RefineryRelay
 
     def call
       state = cursor_state
-      pages = page_scope(state.fetch("last_id")).limit(page_size + 1).to_a
-      batch = pages.first(page_size)
-      has_more = pages.length > page_size
-      last_id = batch.last ? batch.last.id : state.fetch("last_id")
-
-      checkpoint = encode_cursor(
-        has_more ? { "mode" => "snapshot", "last_id" => last_id } : { "mode" => "complete" }
-      )
+      documents, next_state = documents_for(state)
+      checkpoint = encode_cursor(next_state)
       payload = {
-        "documents" => batch.map { |page| document_for(page) }.compact,
+        "documents" => documents,
         "cursor" => checkpoint
       }
-      payload["next_cursor"] = checkpoint if has_more
+      payload["next_cursor"] = checkpoint unless next_state["mode"] == "complete"
       payload
     end
 
@@ -53,15 +50,57 @@ module RefineryRelay
     attr_reader :cursor, :public_base_url, :page_size
 
     def cursor_state
-      return { "last_id" => 0 } if cursor.blank? || cursor["mode"] == "complete"
-      raise InvalidCursor unless cursor["mode"] == "snapshot"
+      return { "mode" => "tombstones", "last_id" => 0 } if cursor.blank? || cursor["mode"] == "complete"
+      mode = cursor["mode"] == "snapshot" ? "pages" : cursor["mode"]
+      raise InvalidCursor unless %w[tombstones pages].include?(mode)
 
       last_id = Integer(cursor.fetch("last_id"))
       raise InvalidCursor if last_id.negative?
 
-      { "last_id" => last_id }
+      { "mode" => mode, "last_id" => last_id }
     rescue KeyError, ArgumentError, TypeError
       raise InvalidCursor
+    end
+
+    def documents_for(state)
+      if state.fetch("mode") == "tombstones"
+        tombstones, more_tombstones = tombstone_batch(state.fetch("last_id"))
+        return [ tombstones.map { |tombstone| deleted_document(tombstone) }, { "mode" => "tombstones", "last_id" => tombstones.last.id } ] if more_tombstones
+
+        remaining = page_size - tombstones.length
+        pages, more_pages = page_batch(0, remaining)
+        next_state = if more_pages
+          { "mode" => "pages", "last_id" => pages.last.id }
+        else
+          { "mode" => "complete" }
+        end
+        return [ tombstones.map { |tombstone| deleted_document(tombstone) } + pages.map { |page| document_for(page) }, next_state ]
+      end
+
+      pages, more_pages = page_batch(state.fetch("last_id"), page_size)
+      next_state = more_pages ? { "mode" => "pages", "last_id" => pages.last.id } : { "mode" => "complete" }
+      [ pages.map { |page| document_for(page) }, next_state ]
+    end
+
+    def page_batch(last_id, limit)
+      return [ [], false ] if limit <= 0
+
+      records = page_scope(last_id).limit(limit + 1).to_a
+      [ records.first(limit), records.length > limit ]
+    end
+
+    def tombstone_batch(last_id)
+      tombstone_model = RefineryRelay::SourceTombstone
+      return [ [], false ] unless tombstone_model.available?
+
+      records = tombstone_model.where("id > ?", last_id).order("id ASC").limit(page_size + 1).to_a
+      [ records.first(page_size), records.length > page_size ]
+    rescue NameError
+      [ [], false ]
+    end
+
+    def deleted_document(tombstone)
+      { "external_id" => tombstone.external_id, "deleted" => true }
     end
 
     def page_scope(last_id)
@@ -72,19 +111,21 @@ module RefineryRelay
       title = page.title.to_s.squish.presence || "Untitled page"
       parts = page_parts(page)
       pods = page_pods(page)
-      content_blocks = page_content_blocks(title, parts, pods)
-      content = ([ "Title: #{title}" ] + part_content(parts) + pod_content(pods)).join("\n\n")
-      updated_at = ([ page.updated_at ] + parts.map(&:updated_at) + pods.map(&:updated_at)).compact.max || Time.current
+      assets = page_assets(page, pods)
+      asset_text = asset_search_text(assets)
+      content_blocks = page_content_blocks(title, parts, pods, asset_text)
+      content = ([ "Title: #{title}" ] + part_content(parts) + pod_content(pods) + asset_text).join("\n\n")
+      updated_at = ([ page.updated_at ] + parts.map(&:updated_at) + pods.map(&:updated_at) + [ asset_updated_at(page, pods) ]).compact.max || Time.current
       metadata = {
         "source" => "refinery",
         "page_id" => page.id,
         "slug" => page.respond_to?(:slug) ? page.slug : nil,
         "pod_types" => pods.map { |pod| pod.respond_to?(:pod_type) ? pod.pod_type.to_s : nil }.compact.uniq.sort,
         "page_part_count" => parts.length,
-        "pod_count" => pods.length
+        "pod_count" => pods.length,
+        "assets" => assets.presence
       }.delete_if { |_key, value| value.nil? }
-
-      {
+      document = {
         "external_id" => "pages:#{page.id}",
         "title" => title,
         "url" => page_url(page),
@@ -92,10 +133,11 @@ module RefineryRelay
         "content_type" => "page",
         "language" => ::I18n.locale.to_s.presence || "en",
         "updated_at" => updated_at.utc.iso8601,
-        "content_hash" => Digest::SHA256.hexdigest(JSON.generate(canonicalize("content" => content, "content_blocks" => content_blocks, "metadata" => metadata))),
         "content_blocks" => content_blocks,
         "metadata" => metadata
       }
+      document["content_hash"] = Digest::SHA256.hexdigest(JSON.generate(canonicalize(document.except("updated_at"))))
+      document
     end
 
     def page_parts(page)
@@ -134,9 +176,18 @@ module RefineryRelay
     # Relay uses structured blocks to retain headings while it creates
     # embeddings. This is the same contract used by the modern Comrades CMS,
     # adapted to Refinery's page parts and legacy Pods records.
-    def page_content_blocks(title, parts, pods)
+    def page_content_blocks(title, parts, pods, asset_text)
       [ { "kind" => "heading", "level" => 1, "text" => title } ] +
-        page_part_blocks(parts) + pod_blocks(pods)
+        page_part_blocks(parts) + pod_blocks(pods) + asset_blocks(asset_text)
+    end
+
+    def asset_blocks(asset_text)
+      return [] if asset_text.empty?
+
+      [
+        { "kind" => "heading", "level" => 2, "text" => "Related files and images" },
+        { "kind" => "list", "items" => asset_text }
+      ]
     end
 
     def page_part_blocks(parts)
@@ -192,6 +243,123 @@ module RefineryRelay
       pod.sub_title.to_s.squish
     end
 
+    def page_assets(page, pods)
+      records = []
+      records.concat(media_records(page, PAGE_IMAGE_FIELDS, "image"))
+      pods.each do |pod|
+        records.concat(media_records(pod, POD_IMAGE_FIELDS, "image"))
+        records.concat(media_records(pod, POD_FILE_FIELDS, "file"))
+      end
+
+      records.each_with_object({}) do |(kind, record), assets|
+        asset = media_asset(kind, record)
+        assets[asset.fetch("external_id")] ||= asset if asset
+      end.values
+    end
+
+    def asset_updated_at(page, pods)
+      records = media_records(page, PAGE_IMAGE_FIELDS, "image")
+      pods.each do |pod|
+        records.concat(media_records(pod, POD_IMAGE_FIELDS, "image"))
+        records.concat(media_records(pod, POD_FILE_FIELDS, "file"))
+      end
+      records.map { |_kind, record| record.updated_at if record.respond_to?(:updated_at) }.compact.max
+    end
+
+    def media_records(record, fields, kind)
+      fields.each_with_object([]) do |field, records|
+        next unless record.respond_to?(field)
+
+        attachment = record.public_send(field)
+        records << [ kind, attachment ] if attachment.present?
+      rescue StandardError
+        next
+      end
+    end
+
+    def media_asset(kind, record)
+      url = media_url(record)
+      return if url.blank?
+
+      attachment = kind == "image" ? :image : :file
+      external_id = "#{kind == "image" ? "images" : "files"}:#{record.id}"
+      asset = {
+        "external_id" => external_id,
+        "kind" => kind == "image" ? "image" : media_kind(record),
+        "url" => url,
+        "mime_type" => media_mime_type(record),
+        "content_hash" => media_content_hash(record, attachment),
+        "caption" => media_title(record),
+        "alt_text" => media_alt_text(record),
+        "metadata" => {
+          "refinery_id" => record.id,
+          "refinery_attachment" => attachment.to_s
+        }
+      }
+      thumbnail_url = media_thumbnail_url(record) if kind == "image"
+      asset["thumbnail_url"] = thumbnail_url if thumbnail_url.present?
+      asset.delete_if { |_key, value| value.nil? || value == "" }
+    rescue StandardError
+      nil
+    end
+
+    def media_url(record)
+      return unless record.respond_to?(:url)
+
+      absolute_http_url(record.url)
+    end
+
+    def media_thumbnail_url(record)
+      return unless record.respond_to?(:thumbnail)
+
+      absolute_http_url(record.thumbnail(geometry: "480x480>").url)
+    rescue StandardError
+      nil
+    end
+
+    def media_kind(record)
+      media_mime_type(record) == "application/pdf" ? "pdf" : "file"
+    end
+
+    def media_mime_type(record)
+      return record.mime_type.to_s if record.respond_to?(:mime_type) && record.mime_type.present?
+      return record.image_mime_type.to_s if record.respond_to?(:image_mime_type) && record.image_mime_type.present?
+      return record.file_mime_type.to_s if record.respond_to?(:file_mime_type) && record.file_mime_type.present?
+
+      "application/octet-stream"
+    end
+
+    def media_content_hash(record, attachment)
+      value = record.public_send(attachment) if record.respond_to?(attachment)
+      data = value.data if value.respond_to?(:data)
+      return Digest::SHA256.hexdigest(data) if data.is_a?(String)
+
+      Digest::SHA256.hexdigest([
+        record.respond_to?(:id) ? record.id : nil,
+        record.respond_to?(:updated_at) ? record.updated_at&.utc&.iso8601 : nil,
+        record.respond_to?(:size) ? record.size : nil,
+        record.respond_to?(:url) ? record.url : nil
+      ].join("\u0000"))
+    rescue StandardError
+      Digest::SHA256.hexdigest(record.id.to_s)
+    end
+
+    def media_title(record)
+      record.respond_to?(:title) ? record.title.to_s.squish.presence : nil
+    end
+
+    def media_alt_text(record)
+      return unless record.respond_to?(:alt)
+
+      record.alt.to_s.squish.presence
+    end
+
+    def asset_search_text(assets)
+      assets.map do |asset|
+        [ asset["caption"], asset["alt_text"], "Attached #{asset["kind"]}: #{asset["url"]}" ].compact.uniq.join(" — ")
+      end
+    end
+
     def html_blocks(value)
       fragment = Nokogiri::HTML.fragment(value.to_s)
       fragment.css("script, style, template, noscript").remove
@@ -243,6 +411,12 @@ module RefineryRelay
 
       fallback = page.respond_to?(:slug) && page.slug.to_s != "home" ? "/#{page.slug}" : "/"
       normalized_http_url("#{public_base_url}#{fallback}") || public_base_url
+    end
+
+    def absolute_http_url(value)
+      raw_value = value.to_s
+      candidate = raw_value =~ %r{\Ahttps?://}i ? raw_value : "#{public_base_url}/#{raw_value.sub(%r{\A/+}, "")}"
+      normalized_http_url(candidate)
     end
 
     def normalized_http_url(value)

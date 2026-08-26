@@ -29,4 +29,5 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency "capybara", "~> 3.24"
   spec.add_development_dependency "selenium-webdriver", "~> 3.142.3"
   spec.add_development_dependency "ffi", "~> 1.11.1"
+  spec.add_development_dependency "sqlite3", "~> 1.3"
 end

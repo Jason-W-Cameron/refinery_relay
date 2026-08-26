@@ -15,6 +15,8 @@ class RefineryRelayConfigurationTest < ActiveSupport::TestCase
       "RELAY_PUBLIC_BASE_URL" => "https://refinery.example/",
       "RELAY_CHAT_BASE_URL" => "https://relay.example/",
       "RELAY_CHAT_TOKEN" => "chat-token",
+      "RELAY_SYNC_TOKEN" => "sync-token",
+      "RELAY_SOURCE_ID" => "source-id",
       "RELAY_CHAT_TENANT_KEY" => "refinery-site",
       "RELAY_CHAT_OPEN_TIMEOUT_SECONDS" => "8",
       "RELAY_CHAT_READ_TIMEOUT_SECONDS" => "60",
@@ -32,6 +34,10 @@ class RefineryRelayConfigurationTest < ActiveSupport::TestCase
     assert_equal "https://refinery.example", configuration.public_base_url
     assert_equal "https://relay.example", configuration.chat_base_url
     assert_equal "chat-token", configuration.chat_token
+    assert_equal "sync-token", configuration.sync_token
+    assert_equal "source-id", configuration.sync_source_id
+    assert_equal "https://relay.example", configuration.sync_base_url
+    assert configuration.sync_configured?
     assert_equal "refinery-site", configuration.chat_tenant_key
     assert_equal 8, configuration.chat_open_timeout_seconds
     assert_equal 60, configuration.chat_read_timeout_seconds

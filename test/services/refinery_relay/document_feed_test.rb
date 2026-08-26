@@ -4,8 +4,17 @@ require "test_helper"
 
 class RefineryRelayDocumentFeedTest < ActiveSupport::TestCase
   FakePart = Struct.new(:id, :position, :title, :body, :updated_at)
-  FakePod = Struct.new(:id, :position, :name, :pod_type, :body, :body2, :body3, :hidden_body, :updated_at)
+  FakePod = Struct.new(:id, :position, :name, :pod_type, :body, :body2, :body3, :hidden_body, :updated_at,
+                       :image, :mobile_image, :image2, :image3, :background_image, :file, :file2)
   FakePage = Struct.new(:id, :title, :slug, :url, :parts, :pods, :updated_at)
+  FakeBinary = Struct.new(:url, :data)
+  FakeImage = Struct.new(:id, :title, :alt, :image_mime_type, :updated_at, :url, :image) do
+    def thumbnail(geometry:)
+      FakeBinary.new("#{url}?geometry=#{geometry}", "thumbnail")
+    end
+  end
+
+  FakeResource = Struct.new(:id, :title, :file_mime_type, :updated_at, :url, :file)
 
   class TestFeed < RefineryRelay::DocumentFeed
     def initialize(pages:, **options)
@@ -96,5 +105,27 @@ class RefineryRelayDocumentFeedTest < ActiveSupport::TestCase
     document = TestFeed.new(pages: [ page ], cursor: nil, public_base_url: "https://sit.example").call.fetch("documents").first
 
     assert_equal "https://sit.example/terms%20and%20conditions", document.fetch("url")
+  end
+
+  test "includes referenced Refinery images and files as Relay citation assets" do
+    now = Time.utc(2026, 8, 25, 12, 0, 0)
+    image = FakeImage.new(8, "Start line", "Runners at the start line", "image/jpeg", now,
+                          "/system/images/start.jpg", FakeBinary.new("/system/images/start.jpg", "image-bytes"))
+    file = FakeResource.new(9, "Parking layout", "application/pdf", now,
+                            "/system/resources/parking.pdf", FakeBinary.new("/system/resources/parking.pdf", "pdf-bytes"))
+    pod = FakePod.new(2, 1, "Race assets", "content", "<p>See the downloadable layout.</p>", nil, nil, nil, now,
+                      image, nil, nil, nil, nil, file, nil)
+    page = FakePage.new(7, "Race information", "race-information", "/race-information", [], [ pod ], now)
+
+    document = TestFeed.new(pages: [ page ], cursor: nil, public_base_url: "https://sit.example").call.fetch("documents").first
+    assets = document.dig("metadata", "assets")
+
+    assert_equal [ "images:8", "files:9" ], assets.map { |asset| asset.fetch("external_id") }
+    assert_equal "https://sit.example/system/images/start.jpg", assets.first.fetch("url")
+    assert_equal "https://sit.example/system/images/start.jpg?geometry=480x480%3E", assets.first.fetch("thumbnail_url")
+    assert_equal "image", assets.first.fetch("kind")
+    assert_equal "pdf", assets.last.fetch("kind")
+    assert_match(/\A[a-f0-9]{64}\z/, assets.first.fetch("content_hash"))
+    assert_includes document.fetch("content"), "Parking layout"
   end
 end

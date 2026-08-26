@@ -57,7 +57,7 @@ class RefineryRelayDisposableHostInstallTest < ActiveSupport::TestCase
       "RELAY_CHAT_TOKEN" => "relay-test-token",
       "RELAY_PUBLIC_BASE_URL" => "https://refinery.example"
     }
-    original_values = values.keys.to_h { |key| [ key, ENV[key] ] }
+    original_values = values.keys.each_with_object({}) { |key, result| result[key] = ENV[key] }
     ENV.update(values)
     yield
   ensure
