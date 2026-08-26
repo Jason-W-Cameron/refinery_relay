@@ -162,6 +162,14 @@ module RefineryRelay
                   "db/migrate/#{timestamp}_add_information_image_to_refinery_relay_pod_settings.rb"
       end
 
+      def install_assistant_response_color_migration
+        return if Dir.glob(destination_path("db/migrate/*_add_assistant_response_color_to_refinery_relay_site_settings.rb")).any?
+
+        timestamp = (Time.now.utc + 5).strftime("%Y%m%d%H%M%S")
+        copy_file "add_assistant_response_color_to_refinery_relay_site_settings.rb",
+                  "db/migrate/#{timestamp}_add_assistant_response_color_to_refinery_relay_site_settings.rb"
+      end
+
       def show_post_install_steps
         readme "POST_INSTALL"
       end

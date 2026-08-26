@@ -92,8 +92,8 @@ right-hand information card, footer logo image URL, and footer logo link. These 
 stored per pod; blank values fall back to the initializer defaults.
 
 The chat theme can be configured once per Refinery site in the `Styling` section beneath
-Suggested Questions when editing an `LLM Chat` Pod. The four available values are accent colour,
-background colour, surface colour, and text colour. Supporting colours and contrast-safe button
+Suggested Questions when editing an `LLM Chat` Pod. The five available values are accent colour,
+background colour, surface colour, text colour, and assistant response colour. Supporting colours and contrast-safe button
 text are derived automatically and shared by all LLM Chat Pods. The generated initializer remains
 the fallback when no admin values have been saved.
 

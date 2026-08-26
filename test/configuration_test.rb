@@ -22,6 +22,7 @@ class RefineryRelayConfigurationTest < ActiveSupport::TestCase
       "RELAY_CHAT_BACKGROUND_COLOR" => "#ffffff",
       "RELAY_CHAT_SURFACE_COLOR" => "#f8fafc",
       "RELAY_CHAT_TEXT_COLOR" => "#111827",
+      "RELAY_CHAT_ASSISTANT_RESPONSE_COLOR" => "#374151",
       "RELAY_CHAT_PROMPT_PLACEHOLDER" => "How many races must I run?"
     }
 
@@ -38,6 +39,7 @@ class RefineryRelayConfigurationTest < ActiveSupport::TestCase
     assert_equal "#ffffff", configuration.chat_background_color
     assert_equal "#f8fafc", configuration.chat_surface_color
     assert_equal "#111827", configuration.chat_text_color
+    assert_equal "#374151", configuration.chat_assistant_response_color
     assert_equal "How many races must I run?", configuration.chat_prompt_placeholder
   end
 

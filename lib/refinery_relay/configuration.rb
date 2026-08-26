@@ -6,6 +6,7 @@ module RefineryRelay
     DEFAULT_CHAT_BACKGROUND_COLOR = "#101010"
     DEFAULT_CHAT_SURFACE_COLOR = "#181818"
     DEFAULT_CHAT_TEXT_COLOR = "#f5f5f5"
+    DEFAULT_CHAT_ASSISTANT_RESPONSE_COLOR = "#dedede"
     DEFAULT_CHAT_PROMPT_PLACEHOLDER = "Ask a question about this organisation's published information…"
     DEFAULT_CHAT_FOOTER_LOGO_URL = "refinery_relay/niimble-logo-light-tp.png"
     DEFAULT_CHAT_FOOTER_LOGO_LINK = "https://www.niimble.io"
@@ -22,6 +23,7 @@ module RefineryRelay
                   :chat_background_color,
                   :chat_surface_color,
                   :chat_text_color,
+                  :chat_assistant_response_color,
                   :chat_prompt_placeholder,
                   :chat_footer_logo_url,
                   :chat_footer_logo_link,
@@ -42,6 +44,7 @@ module RefineryRelay
         chat_background_color: env.fetch("RELAY_CHAT_BACKGROUND_COLOR", DEFAULT_CHAT_BACKGROUND_COLOR),
         chat_surface_color: env.fetch("RELAY_CHAT_SURFACE_COLOR", DEFAULT_CHAT_SURFACE_COLOR),
         chat_text_color: env.fetch("RELAY_CHAT_TEXT_COLOR", DEFAULT_CHAT_TEXT_COLOR),
+        chat_assistant_response_color: env.fetch("RELAY_CHAT_ASSISTANT_RESPONSE_COLOR", DEFAULT_CHAT_ASSISTANT_RESPONSE_COLOR),
         chat_prompt_placeholder: env.fetch("RELAY_CHAT_PROMPT_PLACEHOLDER", DEFAULT_CHAT_PROMPT_PLACEHOLDER),
         chat_footer_logo_url: env.fetch("RELAY_CHAT_FOOTER_LOGO_URL", DEFAULT_CHAT_FOOTER_LOGO_URL),
         chat_footer_logo_link: env.fetch("RELAY_CHAT_FOOTER_LOGO_LINK", DEFAULT_CHAT_FOOTER_LOGO_LINK),
@@ -56,6 +59,7 @@ module RefineryRelay
                    chat_background_color: DEFAULT_CHAT_BACKGROUND_COLOR,
                    chat_surface_color: DEFAULT_CHAT_SURFACE_COLOR,
                    chat_text_color: DEFAULT_CHAT_TEXT_COLOR,
+                   chat_assistant_response_color: DEFAULT_CHAT_ASSISTANT_RESPONSE_COLOR,
                    chat_prompt_placeholder: DEFAULT_CHAT_PROMPT_PLACEHOLDER,
                    chat_footer_logo_url: DEFAULT_CHAT_FOOTER_LOGO_URL,
                    chat_footer_logo_link: DEFAULT_CHAT_FOOTER_LOGO_LINK,
@@ -72,6 +76,7 @@ module RefineryRelay
       @chat_background_color = chat_background_color
       @chat_surface_color = chat_surface_color
       @chat_text_color = chat_text_color
+      @chat_assistant_response_color = chat_assistant_response_color
       @chat_prompt_placeholder = chat_prompt_placeholder
       @chat_footer_logo_url = chat_footer_logo_url
       @chat_footer_logo_link = chat_footer_logo_link

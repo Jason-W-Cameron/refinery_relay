@@ -4,7 +4,7 @@ module RefineryRelay
   class SiteSettings < ApplicationRecord
     self.table_name = "refinery_relay_site_settings"
 
-    COLOR_ATTRIBUTES = %i[accent_color background_color surface_color text_color].freeze
+    COLOR_ATTRIBUTES = %i[accent_color background_color surface_color text_color assistant_response_color].freeze
     HEX_COLOR = /\A#(?:[0-9a-f]{3}|[0-9a-f]{6})\z/i
 
     def self.current

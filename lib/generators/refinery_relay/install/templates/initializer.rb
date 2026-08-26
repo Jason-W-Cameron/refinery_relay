@@ -18,6 +18,7 @@ RefineryRelay.configure do |config|
   # config.chat_background_color = "#101010"
   # config.chat_surface_color = "#181818"
   # config.chat_text_color = "#f5f5f5"
+  # config.chat_assistant_response_color = "#dedede"
   # config.chat_prompt_placeholder = "Ask a question about this organisation's published information…"
   # config.chat_footer_logo_url = "refinery_relay/niimble-logo-light-tp.png"
   # config.chat_footer_logo_link = "https://www.niimble.io"
