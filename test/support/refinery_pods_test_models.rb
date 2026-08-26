@@ -1,8 +1,9 @@
 # frozen_string_literal: true
 
-module Refinery
-  module Pods
-    class Pod < ActiveRecord::Base
+unless defined?(::Refinery::Pods::Pod) || defined?(::Refinery::Pods::PodItem)
+  module Refinery
+    module Pods
+      class Pod < ActiveRecord::Base
       self.table_name = "refinery_pods"
 
       POD_TYPES = [ [ "Basic Text Editor", "content" ] ]
@@ -20,12 +21,13 @@ module Refinery
       end
     end
 
-    class PodItem < ActiveRecord::Base
-      self.table_name = "refinery_pod_items"
+      class PodItem < ActiveRecord::Base
+        self.table_name = "refinery_pod_items"
 
-      belongs_to :pod,
-        class_name: "Refinery::Pods::Pod",
-        inverse_of: :pod_items
+        belongs_to :pod,
+          class_name: "Refinery::Pods::Pod",
+          inverse_of: :pod_items
+      end
     end
   end
 end
@@ -55,5 +57,8 @@ module RefineryPodsTestSchema
       table.integer :position
       table.timestamps
     end
+
+    ::Refinery::Pods::Pod.reset_column_information
+    ::Refinery::Pods::PodItem.reset_column_information
   end
 end

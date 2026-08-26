@@ -29,7 +29,7 @@ class RefineryRelayChatSystemTest < ApplicationSystemTestCase
     wait_for_chat_ready
 
     assert_text "Ask the test site"
-    assert_text "What would you like to know?"
+    assert_field "Ask a question", placeholder: "What would you like to know?"
     assert_button "What information is published?"
 
     fill_in "Ask a question", with: "What does Relay know?"
@@ -48,7 +48,7 @@ class RefineryRelayChatSystemTest < ApplicationSystemTestCase
     assert_equal "What does Relay know?", request.dig(:body, "message")
     assert_equal "web", request.dig(:body, "context", "interface")
 
-    click_button "Start over"
+    find("[data-refinery-relay-reset]").click
     assert_field "Ask a question"
     assert_no_text "Relay can answer from the published website"
   end
@@ -106,6 +106,7 @@ class RefineryRelayChatSystemTest < ApplicationSystemTestCase
       config.chat_token = "system-test-token"
       config.chat_tenant_key = "system-test"
       config.public_base_url = @relay.base_url
+      config.chat_prompt_placeholder = "What would you like to know?"
       config.redis = @redis
       config.broadcaster = ActionCable.server
     end
@@ -115,7 +116,6 @@ class RefineryRelayChatSystemTest < ApplicationSystemTestCase
     Refinery::Pods::Pod.create!(
       name: "System test chat",
       title: "Ask the test site",
-      subtitle: "What would you like to know?",
       body: "<p>Answers come from a persisted Refinery Pod.</p>",
       pod_type: "llm_chat"
     ).tap do |pod|
