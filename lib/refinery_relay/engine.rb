@@ -36,13 +36,34 @@ module RefineryRelay
 
     config.to_prepare do
       RefineryRelay::PodRegistration.install!
+      RefineryRelay::Engine.install_source_sync_callbacks!
 
-      if defined?(::Refinery::Pods::Admin::PodsController)
-        controller = ::Refinery::Pods::Admin::PodsController
+      # `to_prepare` may run before classic Rails autoloading has loaded the
+      # Pods admin controller. Resolve it by name so registration works on a
+      # cold boot as well as after a development reload.
+      if (controller = "Refinery::Pods::Admin::PodsController".safe_constantize)
         unless controller.ancestors.include?(RefineryRelay::PodsAdminController)
           controller.prepend(RefineryRelay::PodsAdminController)
         end
       end
+    end
+
+    def self.install_source_sync_callbacks!
+      install_callback(::Refinery::Page, RefineryRelay::PageSourceSyncCallbacks) if defined?(::Refinery::Page)
+
+      [
+        "Refinery::PagePart",
+        "Refinery::Pods::Pod",
+        "Refinery::Image",
+        "Refinery::Resource"
+      ].each do |name|
+        model = name.safe_constantize
+        install_callback(model, RefineryRelay::SourceSyncCallbacks) if model
+      end
+    end
+
+    def self.install_callback(model, callback)
+      model.include(callback) unless model.ancestors.include?(callback)
     end
   end
 end

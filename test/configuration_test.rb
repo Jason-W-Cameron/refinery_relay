@@ -12,7 +12,6 @@ class RefineryRelayConfigurationTest < ActiveSupport::TestCase
   test "loads Relay configuration from environment variables" do
     env = {
       "RELAY_SOURCE_TOKEN" => "source-token",
-      "RELAY_RSS_FEED_URL" => "https://refinery.example/nlweb/rss",
       "RELAY_PUBLIC_BASE_URL" => "https://refinery.example/",
       "RELAY_CHAT_BASE_URL" => "https://relay.example/",
       "RELAY_CHAT_TOKEN" => "chat-token",
@@ -23,13 +22,13 @@ class RefineryRelayConfigurationTest < ActiveSupport::TestCase
       "RELAY_CHAT_BACKGROUND_COLOR" => "#ffffff",
       "RELAY_CHAT_SURFACE_COLOR" => "#f8fafc",
       "RELAY_CHAT_TEXT_COLOR" => "#111827",
+      "RELAY_CHAT_ASSISTANT_RESPONSE_COLOR" => "#374151",
       "RELAY_CHAT_PROMPT_PLACEHOLDER" => "How many races must I run?"
     }
 
     configuration = RefineryRelay.configure_from_env!(env)
 
     assert_equal "source-token", configuration.source_token
-    assert_equal "https://refinery.example/nlweb/rss", configuration.rss_feed_url
     assert_equal "https://refinery.example", configuration.public_base_url
     assert_equal "https://relay.example", configuration.chat_base_url
     assert_equal "chat-token", configuration.chat_token
@@ -40,6 +39,7 @@ class RefineryRelayConfigurationTest < ActiveSupport::TestCase
     assert_equal "#ffffff", configuration.chat_background_color
     assert_equal "#f8fafc", configuration.chat_surface_color
     assert_equal "#111827", configuration.chat_text_color
+    assert_equal "#374151", configuration.chat_assistant_response_color
     assert_equal "How many races must I run?", configuration.chat_prompt_placeholder
   end
 
@@ -49,6 +49,12 @@ class RefineryRelayConfigurationTest < ActiveSupport::TestCase
     end
 
     assert_equal "https://override.example", RefineryRelay.configuration.chat_base_url
+  end
+
+  test "does not expose an RSS feed URL setting" do
+    configuration = RefineryRelay::Configuration.from_env({})
+
+    refute_respond_to configuration, :rss_feed_url
   end
 
   test "uses a generic Refinery tenant key by default" do

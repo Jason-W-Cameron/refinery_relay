@@ -4,10 +4,11 @@ require "redis"
 
 # RefineryRelay reads its credentials and defaults from RELAY_* environment
 # variables. Keep credentials in the host environment rather than source control.
-# Set RELAY_RSS_FEED_URL to the site's existing RSS or Atom feed and
-# RELAY_SOURCE_TOKEN to a private token used by Relay when requesting it.
-# The feed should be a complete snapshot of publicly published pages so Relay
-# can remove pages that are later unpublished or deleted.
+# Set RELAY_SOURCE_TOKEN to a private token used by Relay when requesting the
+# direct feed of published Refinery Pages and their associated Pods.
+# Set RELAY_SYNC_TOKEN and RELAY_SOURCE_ID as well to notify Relay immediately
+# after a committed Refinery content change. RELAY_SYNC_BASE_URL defaults to
+# RELAY_CHAT_BASE_URL when Relay serves both APIs.
 RefineryRelay.configure do |config|
   # A Redis connection is required for shared credit availability state.
   config.redis = Redis.new(url: ENV.fetch("REDIS_URL")) if ENV["REDIS_URL"].present?
@@ -20,6 +21,7 @@ RefineryRelay.configure do |config|
   # config.chat_background_color = "#101010"
   # config.chat_surface_color = "#181818"
   # config.chat_text_color = "#f5f5f5"
+  # config.chat_assistant_response_color = "#dedede"
   # config.chat_prompt_placeholder = "Ask a question about this organisation's published information…"
   # config.chat_footer_logo_url = "refinery_relay/niimble-logo-light-tp.png"
   # config.chat_footer_logo_link = "https://www.niimble.io"

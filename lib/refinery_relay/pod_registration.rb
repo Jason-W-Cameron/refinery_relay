@@ -21,9 +21,10 @@ module RefineryRelay
     end
 
     def default_pod_class
-      return unless defined?(::Refinery::Pods::Pod)
-
-      ::Refinery::Pods::Pod
+      # On Rails' classic autoloader this model is often not loaded yet when
+      # the engine's `to_prepare` callback first runs. `defined?` would return
+      # false and the LLM Chat choice would never be added to the admin form.
+      "Refinery::Pods::Pod".safe_constantize
     end
     private_class_method :default_pod_class
   end

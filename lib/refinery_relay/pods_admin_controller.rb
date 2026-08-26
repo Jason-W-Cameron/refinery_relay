@@ -7,6 +7,7 @@ module RefineryRelay
       refinery_relay_background_color
       refinery_relay_surface_color
       refinery_relay_text_color
+      refinery_relay_assistant_response_color
     ].freeze
     POD_SETTINGS_ATTRIBUTES = %w[
       refinery_relay_prompt_placeholder

@@ -9,6 +9,7 @@ class CreateRefineryRelaySiteSettings < ActiveRecord::Migration[8.1]
       table.string :background_color
       table.string :surface_color
       table.string :text_color
+      table.string :assistant_response_color
       table.timestamps
     end
   end

@@ -8,19 +8,24 @@ module RefineryRelay
         before_action :authenticate_source
 
         def index
-          render json: RefineryRelay::RssDocumentFeed.call(
-            feed_url: RefineryRelay.configuration.rss_feed_url
+          render json: RefineryRelay::DocumentFeed.call(
+            cursor: params[:cursor],
+            public_base_url: source_base_url
           )
-        rescue RefineryRelay::RssDocumentFeed::Error => e
-          render json: { error: "rss_feed_unavailable", message: e.message }, status: :bad_gateway
+        rescue RefineryRelay::DocumentFeed::InvalidCursor
+          render json: { error: "invalid_cursor", message: "cursor is invalid" }, status: :unprocessable_entity
         end
 
         private
 
         def ensure_configured
-          return if RefineryRelay.configuration.source_token.present? && RefineryRelay.configuration.rss_feed_url.present?
+          return if RefineryRelay.configuration.source_token.present?
 
           render json: { error: "source_not_configured" }, status: :service_unavailable
+        end
+
+        def source_base_url
+          RefineryRelay.configuration.public_base_url.presence || request.base_url
         end
 
         def authenticate_source

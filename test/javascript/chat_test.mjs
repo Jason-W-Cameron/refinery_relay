@@ -38,6 +38,7 @@ function citationController(overrides = {}) {
     allowInsecureAssets: false,
     domainFor: ChatController.prototype.domainFor,
     sourceOrigin: "https://refinery.example",
+    sameSourceHost: ChatController.prototype.sameSourceHost,
     safeAssetUrl: ChatController.prototype.safeAssetUrl,
     safeImageUrl: ChatController.prototype.safeImageUrl,
     safeSourceUrl: ChatController.prototype.safeSourceUrl,

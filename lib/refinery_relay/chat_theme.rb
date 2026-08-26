@@ -2,13 +2,14 @@
 
 module RefineryRelay
   class ChatTheme
-    EDITABLE_ATTRIBUTES = %i[accent_color background_color surface_color text_color].freeze
+    EDITABLE_ATTRIBUTES = %i[accent_color background_color surface_color text_color assistant_response_color].freeze
 
     DEFAULTS = {
       accent_color: "#fbbf24",
       background_color: "#101010",
       surface_color: "#181818",
-      text_color: "#f5f5f5"
+      text_color: "#f5f5f5",
+      assistant_response_color: "#dedede"
     }.freeze
 
     HEX_COLOR = /\A#(?:[0-9a-f]{3}|[0-9a-f]{6})\z/i
@@ -20,7 +21,8 @@ module RefineryRelay
         accent_color: RefineryRelay.configuration.chat_accent_color,
         background_color: RefineryRelay.configuration.chat_background_color,
         surface_color: RefineryRelay.configuration.chat_surface_color,
-        text_color: RefineryRelay.configuration.chat_text_color
+        text_color: RefineryRelay.configuration.chat_text_color,
+        assistant_response_color: RefineryRelay.configuration.chat_assistant_response_color
       }
       new(values.merge(RefineryRelay::SiteSettings.current.overrides))
     end
@@ -41,6 +43,8 @@ module RefineryRelay
       accent_rgb = rgb(accent_color)
       text_rgb = rgb(text_color)
       background_rgb = rgb(background_color)
+      danger_color = contrast_text(background_rgb) == "#ffffff" ? "#fca5a5" : "#b91c1c"
+      danger_rgb = rgb(danger_color)
 
       {
         "--refinery-relay-accent" => accent_color,
@@ -50,11 +54,15 @@ module RefineryRelay
         "--refinery-relay-background" => background_color,
         "--refinery-relay-surface" => surface_color,
         "--refinery-relay-surface-raised" => rgba(text_rgb, 0.08),
+        "--refinery-relay-surface-raised-hover" => rgba(text_rgb, 0.12),
         "--refinery-relay-border" => rgba(text_rgb, 0.14),
         "--refinery-relay-border-strong" => rgba(text_rgb, 0.28),
         "--refinery-relay-text" => text_color,
+        "--refinery-relay-assistant-response" => assistant_response_color,
         "--refinery-relay-text-muted" => rgba(text_rgb, 0.68),
-        "--refinery-relay-danger" => contrast_text(background_rgb) == "#ffffff" ? "#fca5a5" : "#b91c1c"
+        "--refinery-relay-danger" => danger_color,
+        "--refinery-relay-danger-soft" => rgba(danger_rgb, 0.11),
+        "--refinery-relay-danger-border" => rgba(danger_rgb, 0.22)
       }.map { |name, value| "#{name}: #{value}" }.join("; ")
     end
 

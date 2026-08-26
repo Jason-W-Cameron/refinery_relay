@@ -80,6 +80,31 @@ class RefineryRelayChatsControllerTest < ActionDispatch::IntegrationTest
     ], response.parsed_body.fetch("citations")
   end
 
+  test "keeps local loopback citations when the browser uses localhost" do
+    RefineryRelay.configuration.public_base_url = "http://localhost:3004"
+    payload = {
+      "answer" => "Read the home page [1].",
+      "citations" => [
+        { "title" => "Home", "url" => "http://127.0.0.1:3004/" },
+        { "title" => "Wrong port", "url" => "http://127.0.0.1:3005/" }
+      ]
+    }
+
+    stub_class_method(RefineryRelay::CreditAvailability, :available?, ->(*) { true }) do
+      stub_class_method(RefineryRelay::ChatClient, :call, lambda { |**|
+        RefineryRelay::ChatClient::Response.new(status: 200, payload: payload)
+      }) do
+        post CHAT_PATH, params: { message: "Where is home?" }, as: :json
+      end
+    end
+
+    assert_response :success
+    assert_equal [
+      { "title" => "Home", "url" => "http://127.0.0.1:3004/" },
+      nil
+    ], response.parsed_body.fetch("citations")
+  end
+
   test "returns unavailable when the shared circuit is open" do
     test_case = self
     stub_class_method(RefineryRelay::CreditAvailability, :available?, ->(*) { false }) do

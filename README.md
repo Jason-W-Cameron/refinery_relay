@@ -87,29 +87,41 @@ right-hand information card, footer logo image URL, and footer logo link. These 
 stored per pod; blank values fall back to the initializer defaults.
 
 The chat theme can be configured once per Refinery site in the `Styling` section beneath
-Suggested Questions when editing an `LLM Chat` Pod. The four available values are accent colour,
-background colour, surface colour, and text colour. Supporting colours and contrast-safe button
+Suggested Questions when editing an `LLM Chat` Pod. The five available values are accent colour,
+background colour, surface colour, text colour, and assistant response colour. Supporting colours and contrast-safe button
 text are derived automatically and shared by all LLM Chat Pods. The generated initializer remains
 the fallback when no admin values have been saved.
 
-## RSS source conversion
+## Direct source feed
 
-The gem can convert an existing RSS or Atom feed into Relay's JSON document format without a
-database migration or a host `routes.rb` change. Configure the feed and a private source token:
+The gem converts published Refinery Pages and their associated Pods directly into Relay's
+paginated JSON document format. It does not require or call an `/nlweb/rss` endpoint. It includes
+structured page/Pod text plus linked Refinery images and resources as Relay citation assets. A
+page delete or unpublish is retained as an explicit feed tombstone, so Relay removes it instead of
+mistaking an absent record for unchanged content. Configure a private source token:
 
 ```text
-RELAY_RSS_FEED_URL=https://www.example.com/feed.rss
 RELAY_SOURCE_TOKEN=replace-with-a-private-token
 ```
 
 The gem automatically provides `GET /refinery_relay/api/relay/documents`. Configure Relay's HTTP
-feed source with that URL and the same bearer token. Each RSS item becomes one Relay document;
-HTML in descriptions is converted to plain searchable text. When a combined feed contains items
-categorized as `Page`, only those Page items are returned; their RSS descriptions can include
-associated Pod content. The feed is treated as the public-site snapshot: only HTTP(S) items on
-`RELAY_PUBLIC_BASE_URL` are ingested, and the Relay source should reconcile removed items from
-each full snapshot so unpublished or deleted pages stop being cited. Chat responses also apply
-the same-origin check before rendering a citation link in the browser.
+feed source with that URL and the same bearer token. Each snapshot page represents one published
+Refinery Page with its Page Parts and associated Pod text. Documents use stable identifiers, are
+paginated for Relay, and contain the public Page URL for citations. Chat responses also apply the
+same-origin check before rendering a citation link in the browser.
+
+To request an immediate re-read after content changes, also configure Relay's source-sync
+credential and the source UUID shown in the Relay console:
+
+```text
+RELAY_SYNC_TOKEN=sync-write-credential
+RELAY_SOURCE_ID=relay-source-uuid
+```
+
+`RELAY_SYNC_BASE_URL` is optional and defaults to `RELAY_CHAT_BASE_URL`. The gem queues a
+`POST /api/v1/sources/:source_id/sync` only after a Page, Page Part, Pod, Image, or Resource
+transaction commits. Relay's normal polling remains the safety net if the source application or
+Relay is temporarily unavailable.
 
 ## Development
 

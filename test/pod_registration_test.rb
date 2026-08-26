@@ -22,6 +22,11 @@ class RefineryRelayPodRegistrationTest < ActiveSupport::TestCase
     assert_not RefineryRelay::PodRegistration.install!(pod_class: nil)
   end
 
+  test "loads the Pods model when registration runs before it has been referenced" do
+    assert_equal Refinery::Pods::Pod,
+                 RefineryRelay::PodRegistration.send(:default_pod_class)
+  end
+
   private
 
   def build_pod_class(pod_types)

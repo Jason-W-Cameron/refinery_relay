@@ -2,11 +2,12 @@ RefineryRelay is installed.
 
 Next steps:
   1. Set RELAY_CHAT_BASE_URL, RELAY_CHAT_TOKEN, RELAY_CHAT_TENANT_KEY,
-     RELAY_PUBLIC_BASE_URL, RELAY_RSS_FEED_URL, RELAY_SOURCE_TOKEN,
+     RELAY_PUBLIC_BASE_URL, RELAY_SOURCE_TOKEN, RELAY_SYNC_TOKEN, RELAY_SOURCE_ID,
      and REDIS_URL in the host environment.
   2. Restart the Rails application so the initializer and Pod registration load.
   3. In Refinery admin, create an LLM Chat Pod and add it to a page.
-  4. Run `bin/rails db:migrate` to enable the site-wide Styling settings and per-pod Chat content.
+  4. Run `bin/rails db:migrate` to enable the site-wide Styling settings, per-pod Chat content,
+     and source-feed deletion tombstones.
   5. Verify the availability endpoint and submit a browser chat request.
 
 Chat endpoints:

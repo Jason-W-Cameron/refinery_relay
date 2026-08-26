@@ -7,7 +7,8 @@
     { key: "accent_color", label: "Accent colour", defaultValue: "#fbbf24" },
     { key: "background_color", label: "Background colour", defaultValue: "#101010" },
     { key: "surface_color", label: "Surface colour", defaultValue: "#181818" },
-    { key: "text_color", label: "Text colour", defaultValue: "#f5f5f5" }
+    { key: "text_color", label: "Text colour", defaultValue: "#f5f5f5" },
+    { key: "assistant_response_color", label: "Assistant response colour", defaultValue: "#dedede" }
   ];
   var POD_SETTINGS_FIELDS = [
     {
@@ -448,11 +449,16 @@
       preview[0].style.setProperty("--refinery-relay-background", theme.background_color);
       preview[0].style.setProperty("--refinery-relay-surface", theme.surface_color);
       preview[0].style.setProperty("--refinery-relay-surface-raised", rgbaColor(theme.text_color, 0.08));
+      preview[0].style.setProperty("--refinery-relay-surface-raised-hover", rgbaColor(theme.text_color, 0.12));
       preview[0].style.setProperty("--refinery-relay-border", rgbaColor(theme.text_color, 0.14));
       preview[0].style.setProperty("--refinery-relay-border-strong", rgbaColor(theme.text_color, 0.28));
       preview[0].style.setProperty("--refinery-relay-text", theme.text_color);
+      preview[0].style.setProperty("--refinery-relay-assistant-response", theme.assistant_response_color);
       preview[0].style.setProperty("--refinery-relay-text-muted", rgbaColor(theme.text_color, 0.68));
-      preview[0].style.setProperty("--refinery-relay-danger", contrastText(theme.background_color) === "#ffffff" ? "#fca5a5" : "#b91c1c");
+      var dangerColor = contrastText(theme.background_color) === "#ffffff" ? "#fca5a5" : "#b91c1c";
+      preview[0].style.setProperty("--refinery-relay-danger", dangerColor);
+      preview[0].style.setProperty("--refinery-relay-danger-soft", rgbaColor(dangerColor, 0.11));
+      preview[0].style.setProperty("--refinery-relay-danger-border", rgbaColor(dangerColor, 0.22));
 
       if (podExamplePanel.length && podType.val() === POD_TYPE) {
         podExamplePanel.children(".field").hide();
