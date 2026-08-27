@@ -1,90 +1,643 @@
-<% if flash[:relay_source_token].present? %>
-  <section class="relay-generated-token">
-    <h2>Bearer access token</h2>
-    <p>Copy this token into the Relay source now. For security, it is shown only once.</p>
-    <input id="relay-generated-token" type="text" class="widest" value="<%= flash[:relay_source_token] %>" readonly>
-    <button type="button" class="button" onclick="navigator.clipboard.writeText(document.getElementById('relay-generated-token').value)">Copy token</button>
-  </section>
-<% end %>
+<style>
+  #refinery-relay-settings {
+    --rr-ink: #0f172a;
+    --rr-body: #334155;
+    --rr-muted: #64748b;
+    --rr-border: #e2e8f0;
+    --rr-border-strong: #cbd5e1;
+    --rr-surface: #ffffff;
+    --rr-canvas: #f6f8fa;
+    --rr-soft: #f8fafc;
+    --rr-accent: #10b981;
+    --rr-accent-dark: #047857;
+    --rr-accent-soft: #ecfdf5;
+    --rr-danger: #e11d48;
+    --rr-danger-soft: #fff1f2;
+    width: 100%;
+    max-width: 1120px;
+    margin: 0 auto;
+    color: var(--rr-body);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
 
-<aside id="actions" class="relay-token-actions">
-  <ul>
-    <li><%= button_to "Generate bearer token", Rails.application.routes.url_helpers.refinery_relay_generate_bearer_token_path, method: :post, class: "button" %></li>
-  </ul>
-</aside>
+  #refinery-relay-settings *,
+  #refinery-relay-settings *::before,
+  #refinery-relay-settings *::after { box-sizing: border-box; }
+  #refinery-relay-settings h1,
+  #refinery-relay-settings h2,
+  #refinery-relay-settings h3,
+  #refinery-relay-settings p { margin: 0; }
 
-<%= form_with model: @relay_setting,
-              url: Rails.application.routes.url_helpers.refinery_relay_settings_path,
-              method: :patch,
-              local: true do |form| %>
-  <%= render "/refinery/admin/error_messages", object: @relay_setting, include_object_name: true %>
+  /* ---------- Canvas ---------- */
+  #refinery-relay-settings .rr-canvas {
+    background: var(--rr-canvas);
+    border-radius: 20px;
+    padding: 28px 28px 32px;
+  }
 
-  <section id="records">
-    <h2>Relay Settings</h2>
-    <p>Configure the Relay connection, the content types to ingest, and the LLM widget.</p>
+  /* ---------- Hero ---------- */
+  #refinery-relay-settings .rr-hero {
+    display: flex !important;
+    float: none !important;
+    width: auto !important;
+    min-height: 0 !important;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 20px;
+    padding-bottom: 24px;
+  }
+  #refinery-relay-settings .rr-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 10px;
+    color: var(--rr-accent-dark);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+  #refinery-relay-settings .rr-eyebrow::before {
+    content: "";
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--rr-accent);
+  }
+  #refinery-relay-settings .rr-hero h2 {
+    color: var(--rr-ink);
+    font-size: 27px;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    line-height: 1.2;
+  }
+  #refinery-relay-settings .rr-hero-copy {
+    max-width: 500px;
+    margin-top: 8px;
+    color: var(--rr-muted);
+    font-size: 13.5px;
+  }
+  #refinery-relay-settings .rr-hero-actions {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: 12px;
+    padding-top: 3px;
+  }
+  #refinery-relay-settings .rr-inline-form { margin: 0; display: flex; }
+  #refinery-relay-settings .rr-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 7px 12px;
+    border-radius: 999px;
+    background: var(--rr-surface);
+    border: 1px solid var(--rr-border);
+    color: var(--rr-body);
+    font-size: 11.5px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  #refinery-relay-settings .rr-status-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--rr-accent);
+    box-shadow: 0 0 0 3px var(--rr-accent-soft);
+  }
+  #refinery-relay-settings .rr-status--pending {
+    border-color: #fde68a;
+    background: #fffbeb;
+    color: #92400e;
+  }
+  #refinery-relay-settings .rr-status--pending .rr-status-dot {
+    background: #f59e0b;
+    box-shadow: 0 0 0 3px #fef3c7;
+  }
 
-    <fieldset>
-      <legend>Chat service</legend>
+  /* ---------- Layout ---------- */
+  #refinery-relay-settings .rr-layout { display: block; }
+  #refinery-relay-settings .rr-main { display: grid; gap: 16px; }
 
-      <div class="field">
-        <%= form.label :chat_base_url, "Relay chat URL" %>
-        <%= form.url_field :chat_base_url, class: "widest", placeholder: "https://relay.example" %>
+  /* ---------- Cards ---------- */
+  #refinery-relay-settings .rr-card {
+    border: 1px solid var(--rr-border);
+    border-radius: 16px;
+    background: var(--rr-surface);
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 6px 16px rgba(15, 23, 42, 0.04);
+    overflow: hidden;
+  }
+  #refinery-relay-settings .rr-card-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 13px;
+    padding: 22px 24px 0;
+  }
+  #refinery-relay-settings .rr-card-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 36px;
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    background: var(--rr-accent-soft);
+    color: var(--rr-accent-dark);
+  }
+  #refinery-relay-settings .rr-card-icon svg { width: 18px; height: 18px; }
+  #refinery-relay-settings .rr-card-header h3 {
+    margin-bottom: 3px;
+    color: var(--rr-ink);
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+  #refinery-relay-settings .rr-card-header p {
+    color: var(--rr-muted);
+    font-size: 12.5px;
+  }
+  #refinery-relay-settings .rr-card-body { padding: 18px 24px 24px; }
+
+  /* ---------- Fields ---------- */
+  #refinery-relay-settings .rr-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px 18px;
+  }
+  #refinery-relay-settings .rr-field { min-width: 0; }
+  #refinery-relay-settings .rr-field-full { grid-column: 1 / -1; }
+  #refinery-relay-settings .rr-label-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 6px;
+  }
+  #refinery-relay-settings .rr-label {
+    display: block;
+    color: var(--rr-ink);
+    font-size: 12px;
+    font-weight: 700;
+  }
+  #refinery-relay-settings .rr-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 2px 9px;
+    border-radius: 999px;
+    background: var(--rr-accent-soft);
+    color: var(--rr-accent-dark);
+    font-size: 10.5px;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+  #refinery-relay-settings .rr-pill::before {
+    content: "";
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--rr-accent-dark);
+  }
+  #refinery-relay-settings .rr-input,
+  #refinery-relay-settings .rr-textarea {
+    display: block;
+    width: 100%;
+    border: 1px solid var(--rr-border-strong);
+    border-radius: 9px;
+    outline: none;
+    background: #fff;
+    color: var(--rr-ink);
+    font: inherit;
+    font-size: 13px;
+    transition: border-color 140ms ease, box-shadow 140ms ease;
+  }
+  #refinery-relay-settings .rr-input { min-height: 40px; padding: 9px 12px; }
+  #refinery-relay-settings .rr-textarea { min-height: 160px; padding: 12px; line-height: 1.6; resize: vertical; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; }
+  #refinery-relay-settings .rr-input::placeholder,
+  #refinery-relay-settings .rr-textarea::placeholder { color: #94a3b8; }
+  #refinery-relay-settings .rr-input:focus,
+  #refinery-relay-settings .rr-textarea:focus {
+    border-color: var(--rr-accent);
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.14);
+  }
+  #refinery-relay-settings .rr-input[readonly] {
+    background: var(--rr-soft);
+    color: var(--rr-body);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 12px;
+  }
+  #refinery-relay-settings .rr-hint { margin-top: 6px; color: var(--rr-muted); font-size: 11px; line-height: 1.45; }
+
+  /* ---------- Source picker ---------- */
+  #refinery-relay-settings .rr-source-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+  #refinery-relay-settings .rr-source-option {
+    position: relative;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 12px 30px 12px 12px;
+    border: 1px solid var(--rr-border);
+    border-radius: 11px;
+    background: #fff;
+    cursor: pointer;
+    transition: border-color 140ms ease, box-shadow 140ms ease;
+  }
+  #refinery-relay-settings .rr-source-option:hover { border-color: var(--rr-border-strong); }
+  #refinery-relay-settings .rr-source-option:has(input:checked) {
+    border-color: var(--rr-accent);
+    box-shadow: 0 0 0 1px var(--rr-accent);
+  }
+  #refinery-relay-settings .rr-source-option input {
+    position: absolute;
+    opacity: 0;
+    width: 1px;
+    height: 1px;
+    pointer-events: none;
+  }
+  #refinery-relay-settings .rr-source-check {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 17px;
+    height: 17px;
+    border-radius: 50%;
+    border: 1.5px solid var(--rr-border-strong);
+    background: #fff;
+    transition: background 140ms ease, border-color 140ms ease;
+  }
+  #refinery-relay-settings .rr-source-check svg {
+    width: 10px;
+    height: 10px;
+    opacity: 0;
+    transition: opacity 100ms ease;
+  }
+  #refinery-relay-settings .rr-source-option:has(input:checked) .rr-source-check {
+    border-color: var(--rr-accent);
+    background: var(--rr-accent);
+  }
+  #refinery-relay-settings .rr-source-option:has(input:checked) .rr-source-check svg { opacity: 1; }
+  #refinery-relay-settings .rr-source-name { display: block; color: var(--rr-ink); font-size: 12.5px; font-weight: 700; }
+  #refinery-relay-settings .rr-source-description { display: block; margin-top: 2px; color: var(--rr-muted); font-size: 11px; line-height: 1.35; }
+
+  /* ---------- Copy surfaces / buttons ---------- */
+  #refinery-relay-settings .rr-copy-row { display: flex; align-items: stretch; gap: 8px; }
+  #refinery-relay-settings .rr-copy-row .rr-input { min-width: 0; }
+  #refinery-relay-settings .rr-copy-surface {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px;
+    border: 1px solid var(--rr-border-strong);
+    border-radius: 10px;
+    background: var(--rr-soft);
+  }
+  #refinery-relay-settings .rr-request-method {
+    display: inline-flex;
+    align-items: center;
+    align-self: stretch;
+    padding: 0 8px;
+    border-radius: 6px;
+    background: var(--rr-accent-soft);
+    color: var(--rr-accent-dark);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+  }
+  #refinery-relay-settings .rr-copy-value {
+    min-width: 0;
+    flex: 1;
+    overflow-x: auto;
+    padding: 0 3px;
+    color: var(--rr-ink);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 11.5px;
+    line-height: 28px;
+    white-space: nowrap;
+    user-select: all;
+  }
+  #refinery-relay-settings .rr-button,
+  #refinery-relay-settings .rr-copy-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: 40px;
+    border: 1px solid transparent;
+    border-radius: 9px;
+    cursor: pointer;
+    font: inherit;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1;
+    text-decoration: none;
+    transition: background 140ms ease, border-color 140ms ease, transform 100ms ease;
+    white-space: nowrap;
+  }
+  #refinery-relay-settings .rr-button:active,
+  #refinery-relay-settings .rr-copy-button:active { transform: scale(0.98); }
+  #refinery-relay-settings .rr-button-primary { padding: 0 18px; background: var(--rr-ink); color: #fff; }
+  #refinery-relay-settings .rr-button-primary:hover { background: #1e293b; }
+  #refinery-relay-settings .rr-button-secondary,
+  #refinery-relay-settings .rr-copy-button { padding: 0 14px; border-color: var(--rr-border-strong); background: #fff; color: var(--rr-body); }
+  #refinery-relay-settings .rr-button-secondary:hover,
+  #refinery-relay-settings .rr-copy-button:hover { border-color: #94a3b8; background: var(--rr-soft); }
+  #refinery-relay-settings .rr-copy-button svg { width: 13px; height: 13px; }
+  #refinery-relay-settings .rr-copy-button.is-copied {
+    border-color: var(--rr-accent);
+    background: var(--rr-accent-soft);
+    color: var(--rr-accent-dark);
+  }
+
+  /* ---------- Token banner ---------- */
+  #refinery-relay-settings .rr-token-banner {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 16px;
+    padding: 16px 18px;
+    border: 1px solid #a7f3d0;
+    border-radius: 14px;
+    background: var(--rr-accent-soft);
+    scroll-margin-top: 18px;
+  }
+  #refinery-relay-settings .rr-token-icon {
+    display: inline-flex;
+    flex: 0 0 34px;
+    width: 34px;
+    height: 34px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+    background: #fff;
+    color: var(--rr-accent-dark);
+  }
+  #refinery-relay-settings .rr-token-icon svg { width: 17px; height: 17px; }
+  #refinery-relay-settings .rr-token-banner-body { flex: 1; min-width: 0; }
+  #refinery-relay-settings .rr-token-banner h3 { margin-bottom: 8px; color: #065f46; font-size: 13px; }
+  #refinery-relay-settings .rr-token-copy { display: flex; align-items: stretch; gap: 8px; }
+  #refinery-relay-settings .rr-token-copy input { min-width: 0; flex: 1; background: #fff; }
+
+  /* ---------- Footer action bar ---------- */
+  #refinery-relay-settings .rr-action-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-top: 4px;
+    padding-top: 4px;
+  }
+  #refinery-relay-settings .rr-action-copy { color: var(--rr-muted); font-size: 11.5px; }
+
+  #refinery-relay-settings .errorExplanation,
+  #refinery-relay-settings .fieldWithErrors { color: var(--rr-danger); }
+
+  @media (max-width: 640px) {
+    #refinery-relay-settings .rr-canvas { padding: 18px 16px 24px; border-radius: 14px; }
+    #refinery-relay-settings .rr-hero { display: block !important; }
+    #refinery-relay-settings .rr-hero h2 { font-size: 21px; }
+    #refinery-relay-settings .rr-hero-actions { justify-content: space-between; margin-top: 16px; padding-top: 0; }
+    #refinery-relay-settings .rr-grid,
+    #refinery-relay-settings .rr-source-grid { grid-template-columns: 1fr; }
+    #refinery-relay-settings .rr-copy-row,
+    #refinery-relay-settings .rr-copy-surface,
+    #refinery-relay-settings .rr-token-copy,
+    #refinery-relay-settings .rr-action-bar { align-items: stretch; flex-direction: column; }
+    #refinery-relay-settings .rr-token-banner { flex-direction: column; align-items: flex-start; }
+    #refinery-relay-settings .rr-request-method { min-height: 34px; justify-content: center; }
+    #refinery-relay-settings .rr-copy-value { width: 100%; }
+    #refinery-relay-settings .rr-button,
+    #refinery-relay-settings .rr-copy-button { width: 100%; }
+  }
+</style>
+
+<div id="refinery-relay-settings">
+  <% source_descriptions = {
+    "pages" => "Published pages and their Pod content",
+    "blog_posts" => "Published articles and essays",
+    "works" => "Portfolio and case-study content",
+    "expertises" => "Expertise pages and descriptions",
+    "faqs" => "Questions and answers",
+    "industries" => "Industry records",
+    "local_businesses" => "Business details and descriptions",
+    "brands" => "Brand profiles"
+  } %>
+  <% relay_configured = @relay_setting.chat_base_url.present? && @relay_setting.chat_token.present? %>
+
+  <div class="rr-canvas">
+    <div class="rr-hero">
+      <div>
+        <p class="rr-eyebrow">Niimble Relay · Refinery CMS</p>
+        <h2>Relay Settings</h2>
+        <p class="rr-hero-copy">Connect this Refinery site to Relay, choose the content it should understand, and place the chat widget where visitors need it.</p>
       </div>
-      <div class="field">
-        <%= form.label :chat_token, "Relay chat token" %>
-        <%= form.password_field :chat_token, class: "widest", autocomplete: "new-password", placeholder: (@relay_setting.chat_token.present? ? "Configured — enter a new value to replace it" : nil) %>
+      <div class="rr-hero-actions">
+        <span class="rr-status <%= "rr-status--pending" unless relay_configured %>">
+          <span class="rr-status-dot" aria-hidden="true"></span>
+          <%= relay_configured ? "Connection configured" : "Setup required" %>
+        </span>
+        <%= button_to "Generate bearer token",
+                      Rails.application.routes.url_helpers.refinery_relay_generate_bearer_token_path,
+                      method: :post,
+                      class: "rr-button rr-button-secondary",
+                      form: { class: "rr-inline-form" } %>
       </div>
-    </fieldset>
+    </div>
 
-    <fieldset>
-      <legend>Content source</legend>
-
-      <div class="field">
-        <%= form.label :source_types, "Sources to ingest" %>
-        <%= form.hidden_field :source_types, multiple: true, value: "" %>
-        <div class="checkboxes">
-          <% RefineryRelay::DocumentFeed::SOURCE_OPTIONS.each do |source| %>
-            <label>
-              <%= form.check_box :source_types,
-                                 { multiple: true, include_hidden: false },
-                                 source.fetch(:key),
-                                 nil %>
-              <%= source.fetch(:label) %>
-            </label>
-          <% end %>
+    <% if @generated_source_token.present? %>
+      <section id="relay-generated-token-panel" class="rr-token-banner" aria-live="polite">
+        <span class="rr-token-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
+        </span>
+        <div class="rr-token-banner-body">
+          <h3>Bearer access token ready</h3>
+          <p class="rr-hint" style="margin: -3px 0 9px; color: #047857;">Copy it into the Relay HTTP source now. It is shown only once.</p>
+          <div class="rr-token-copy">
+            <input id="relay-generated-token" class="rr-input" type="text" value="<%= @generated_source_token %>" readonly aria-label="Generated bearer access token">
+            <button type="button" class="rr-copy-button" data-rr-copy="relay-generated-token" aria-label="Copy bearer access token">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+              <span class="rr-copy-label" aria-live="polite">Copy token</span>
+            </button>
+          </div>
         </div>
-        <p class="help">Select the Refinery content types that Relay should ingest. Optional extensions are ignored when they are not installed.</p>
-      </div>
+      </section>
+    <% end %>
 
-      <div class="field">
-        <label for="relay-feed-endpoint">Feed endpoint</label>
-        <input id="relay-feed-endpoint" type="text" class="widest" value="<%= relay_documents_endpoint %>" readonly>
-        <p class="help">Copy this URL into Relay as an HTTP feed source.</p>
-        <button type="button" class="button" onclick="navigator.clipboard.writeText(document.getElementById('relay-feed-endpoint').value)">Copy endpoint</button>
-      </div>
-      <div class="field">
-        <p>Generate a bearer token, then paste it into the Relay source’s Bearer access token field.</p>
-      </div>
-    </fieldset>
+    <%= form_with model: @relay_setting,
+                  url: Rails.application.routes.url_helpers.refinery_relay_settings_path,
+                  method: :patch,
+                  local: true,
+                  class: "rr-form" do |form| %>
+      <%= render "/refinery/admin/error_messages", object: @relay_setting, include_object_name: true %>
 
-    <fieldset>
-      <legend>LLM widget</legend>
+      <div class="rr-layout">
+        <main class="rr-main">
+          <section class="rr-card">
+            <div class="rr-card-header">
+              <span class="rr-card-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8h1a4 4 0 0 1 0 8h-1M5 8h10v9a4 4 0 0 1-4 4H9a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>
+              </span>
+              <div>
+                <h3>Relay connection</h3>
+                <p>Set the Relay endpoint used by the Refinery chat integration.</p>
+              </div>
+            </div>
+            <div class="rr-card-body">
+              <div class="rr-grid">
+                <div class="rr-field">
+                  <div class="rr-label-row">
+                    <%= form.label :chat_base_url, "Relay chat URL", class: "rr-label" %>
+                  </div>
+                  <%= form.url_field :chat_base_url, class: "rr-input", placeholder: "https://relay.example" %>
+                  <p class="rr-hint">The base URL of your Niimble Relay installation.</p>
+                </div>
+                <div class="rr-field">
+                  <div class="rr-label-row">
+                    <%= form.label :chat_token, "Relay chat token", class: "rr-label" %>
+                    <% if @relay_setting.chat_token.present? %>
+                      <span class="rr-pill">Configured</span>
+                    <% end %>
+                  </div>
+                  <%= form.password_field :chat_token,
+                                           class: "rr-input",
+                                           autocomplete: "new-password",
+                                           placeholder: (@relay_setting.chat_token.present? ? "Leave blank to keep it" : "Paste the Relay chat token") %>
+                  <p class="rr-hint">Stored securely. Leave blank when you are not replacing the current value.</p>
+                </div>
+              </div>
+            </div>
+          </section>
 
-      <div class="field">
-        <%= form.label :widget_markup, "Widget HTML / script" %>
-        <%= form.text_area :widget_markup,
-                           class: "widest",
-                           rows: 12,
-                           spellcheck: false,
-                           placeholder: '<script src="https://relay.example/widget.js"></script>' %>
-        <p class="help">This trusted markup is rendered exactly where each LLM Chat Pod is placed.</p>
+          <section class="rr-card">
+            <div class="rr-card-header">
+              <span class="rr-card-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+              </span>
+              <div>
+                <h3>Content sources</h3>
+                <p>Choose which Refinery content families Relay should ingest and make searchable.</p>
+              </div>
+            </div>
+            <div class="rr-card-body">
+              <%= form.hidden_field :source_types, multiple: true, value: "" %>
+              <div class="rr-source-grid">
+                <% RefineryRelay::DocumentFeed::SOURCE_OPTIONS.each do |source| %>
+                  <% source_key = source.fetch(:key) %>
+                  <label class="rr-source-option">
+                    <%= form.check_box :source_types,
+                                       { multiple: true, include_hidden: false, class: "rr-checkbox" },
+                                       source_key,
+                                       nil %>
+                    <span>
+                      <span class="rr-source-name"><%= source.fetch(:label) %></span>
+                      <span class="rr-source-description"><%= source_descriptions.fetch(source_key) %></span>
+                    </span>
+                    <span class="rr-source-check" aria-hidden="true">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                    </span>
+                  </label>
+                <% end %>
+              </div>
+              <p class="rr-hint">Optional sources are skipped safely when their Refinery extension is not installed.</p>
+
+              <div class="rr-field" style="margin-top: 20px;">
+                <div class="rr-label-row">
+                  <span class="rr-label">Feed endpoint</span>
+                  <span class="rr-pill">HTTP feed</span>
+                </div>
+                <div class="rr-copy-surface">
+                  <span class="rr-request-method" aria-hidden="true">GET</span>
+                  <code id="relay-feed-endpoint" class="rr-copy-value" tabindex="0"><%= relay_documents_endpoint %></code>
+                  <button type="button" class="rr-copy-button" data-rr-copy="relay-feed-endpoint" aria-label="Copy feed endpoint">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                    <span class="rr-copy-label" aria-live="polite">Copy endpoint</span>
+                  </button>
+                </div>
+                <p class="rr-hint">Add this URL to Relay as an HTTP feed and use the generated bearer token for authentication.</p>
+              </div>
+            </div>
+          </section>
+
+          <section class="rr-card">
+            <div class="rr-card-header">
+              <span class="rr-card-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+              </span>
+              <div>
+                <h3>LLM widget</h3>
+                <p>Paste the Relay widget markup that should appear in each LLM Chat Pod.</p>
+              </div>
+            </div>
+            <div class="rr-card-body">
+              <div class="rr-field">
+                <%= form.label :widget_markup, "Widget HTML / script", class: "rr-label" %>
+                <%= form.text_area :widget_markup,
+                                   class: "rr-textarea",
+                                   rows: 10,
+                                   spellcheck: false,
+                                   placeholder: '<script src="https://relay.example/widget.js"></script>' %>
+                <p class="rr-hint">This trusted markup is rendered exactly where each LLM Chat Pod is placed.</p>
+              </div>
+            </div>
+          </section>
+
+          <div class="rr-action-bar">
+            <p class="rr-action-copy">Changes apply immediately to this Refinery site.</p>
+            <%= form.submit "Save Relay settings", class: "rr-button rr-button-primary" %>
+          </div>
+        </main>
       </div>
-    </fieldset>
-  </section>
+    <% end %>
+  </div>
+</div>
 
-  <aside id="actions">
-    <ul>
-      <li><%= form.submit "Save Relay settings", class: "wymupdate button" %></li>
-    </ul>
-  </aside>
-<% end %>
+<script>
+  (function () {
+    document.querySelectorAll('#refinery-relay-settings [data-rr-copy]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var target = document.getElementById(btn.getAttribute('data-rr-copy'));
+        if (!target) return;
+
+        var text = typeof target.value === 'string' ? target.value : target.textContent.trim();
+        var copyFallback = function () {
+          if (typeof target.select === 'function') {
+            target.select();
+            target.setSelectionRange(0, text.length);
+          } else {
+            var range = document.createRange();
+            range.selectNodeContents(target);
+            window.getSelection().removeAllRanges();
+            window.getSelection().addRange(range);
+          }
+          var copied = document.execCommand('copy');
+          window.getSelection().removeAllRanges();
+          return copied;
+        };
+        var copy = navigator.clipboard && navigator.clipboard.writeText ?
+          navigator.clipboard.writeText(text).then(function () { return true; }).catch(copyFallback) :
+          Promise.resolve(copyFallback());
+
+        copy.then(function (copied) {
+          if (!copied) return;
+          var label = btn.querySelector('.rr-copy-label');
+          var original = label ? label.textContent : null;
+          btn.classList.add('is-copied');
+          if (label) label.textContent = 'Copied';
+          setTimeout(function () {
+            btn.classList.remove('is-copied');
+            if (label && original) label.textContent = original;
+          }, 1600);
+        });
+      });
+    });
+  })();
+</script>

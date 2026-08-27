@@ -10,6 +10,7 @@ module RefineryRelay
 
       def edit
         @relay_setting = RelaySetting.current
+        @generated_source_token = session.delete(:refinery_relay_generated_source_token)
       end
 
       def update
@@ -26,9 +27,10 @@ module RefineryRelay
       def generate_bearer_token
         token = SecureRandom.urlsafe_base64(32)
         RelaySetting.current.update!(source_token: token)
+        session[:refinery_relay_generated_source_token] = token
 
-        redirect_to Rails.application.routes.url_helpers.refinery_relay_settings_path,
-                    flash: { relay_source_token: token, notice: "A new bearer access token was generated. Copy it now; it will not be shown again." }
+        redirect_to Rails.application.routes.url_helpers.refinery_relay_settings_path(anchor: "relay-generated-token-panel"),
+                    notice: "A new bearer access token was generated. Copy it now; it will not be shown again."
       end
 
       private
