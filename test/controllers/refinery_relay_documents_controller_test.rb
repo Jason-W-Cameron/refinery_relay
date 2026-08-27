@@ -61,4 +61,21 @@ class RefineryRelayDocumentsControllerTest < ActionDispatch::IntegrationTest
     assert_response :unprocessable_entity
     assert_equal "invalid_cursor", response.parsed_body.fetch("error")
   end
+
+  test "builds an absolute local base URL when no public URL is configured" do
+    RefineryRelay::RelaySetting.current.update!(public_base_url: "")
+    test_case = self
+    feed = ->(cursor:, public_base_url:) do
+      test_case.assert_nil cursor
+      test_case.assert_equal "http://localhost:3002", public_base_url
+      { "documents" => [], "cursor" => "checkpoint" }
+    end
+
+    stub_class_method(RefineryRelay::DocumentFeed, :call, feed) do
+      get DOCUMENTS_PATH,
+          headers: { "Authorization" => "Bearer source-token", "Host" => "localhost:3002" }
+    end
+
+    assert_response :success
+  end
 end

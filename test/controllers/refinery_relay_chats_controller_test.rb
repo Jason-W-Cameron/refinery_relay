@@ -52,14 +52,15 @@ class RefineryRelayChatsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "invalid_request", response.parsed_body.fetch("error")
   end
 
-  test "keeps only citations from the configured public site" do
-    RefineryRelay::RelaySetting.create!(public_base_url: "https://refinery.example")
+  test "keeps citations from every host with an absolute HTTP(S) URL" do
     test_case = self
     payload = {
       "answer" => "Read the About page [1].",
       "citations" => [
         { "title" => "About", "url" => "https://refinery.example/about" },
         { "title" => "External", "url" => "https://other.example/article" },
+        { "title" => "Video", "url" => "https://www.youtube.com/watch?v=example" },
+        { "title" => "Relay document", "url" => "http://relay.example/documents/example" },
         { "title" => "Unsafe", "url" => "javascript:alert(1)" }
       ]
     }
@@ -75,18 +76,23 @@ class RefineryRelayChatsControllerTest < ActionDispatch::IntegrationTest
     test_case.assert_response :success
     assert_equal [
       { "title" => "About", "url" => "https://refinery.example/about" },
-      nil,
+      { "title" => "External", "url" => "https://other.example/article" },
+      { "title" => "Video", "url" => "https://www.youtube.com/watch?v=example" },
+      { "title" => "Relay document", "url" => "http://relay.example/documents/example" },
       nil
     ], response.parsed_body.fetch("citations")
   end
 
-  test "keeps local loopback citations when the browser uses localhost" do
-    RefineryRelay::RelaySetting.create!(public_base_url: "http://localhost:3004")
+  test "removes malformed and unsupported citation URLs" do
     payload = {
-      "answer" => "Read the home page [1].",
+      "answer" => "Read the source [1].",
       "citations" => [
-        { "title" => "Home", "url" => "http://127.0.0.1:3004/" },
-        { "title" => "Wrong port", "url" => "http://127.0.0.1:3005/" }
+        { "title" => "Javascript", "url" => "javascript:alert(1)" },
+        { "title" => "Data", "url" => "data:text/html,unsafe" },
+        { "title" => "File", "url" => "file:///etc/passwd" },
+        { "title" => "Relative", "url" => "/about" },
+        { "title" => "Malformed", "url" => "http://" },
+        { "title" => "Empty", "url" => "" }
       ]
     }
 
@@ -99,10 +105,7 @@ class RefineryRelayChatsControllerTest < ActionDispatch::IntegrationTest
     end
 
     assert_response :success
-    assert_equal [
-      { "title" => "Home", "url" => "http://127.0.0.1:3004/" },
-      nil
-    ], response.parsed_body.fetch("citations")
+    assert_equal [ nil, nil, nil, nil, nil, nil ], response.parsed_body.fetch("citations")
   end
 
   test "returns unavailable when the shared circuit is open" do

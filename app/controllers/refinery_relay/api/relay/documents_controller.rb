@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require "uri"
+
 module RefineryRelay
   module Api
     module Relay
@@ -25,7 +27,18 @@ module RefineryRelay
         end
 
         def source_base_url
-          RefineryRelay.configuration.public_base_url.presence || request.base_url
+          configured = RefineryRelay.configuration.public_base_url.to_s.strip
+          return configured if absolute_http_url?(configured)
+
+          protocol = request.ssl? ? "https" : "http"
+          "#{protocol}://#{request.host_with_port}"
+        end
+
+        def absolute_http_url?(value)
+          uri = URI.parse(value)
+          uri.is_a?(URI::HTTP) && uri.host.present?
+        rescue URI::InvalidURIError
+          false
         end
 
         def authenticate_source

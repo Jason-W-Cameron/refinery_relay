@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require "uri"
+
 module RefineryRelay
   module Api
     module Relay
@@ -38,23 +40,25 @@ module RefineryRelay
           params.fetch(:context, {}).permit(:current_url, :locale, :interface, :interface_type).to_h
         end
 
-        # Keep citation positions stable so answer markers such as [1] still
-        # refer to the same citation after unsafe or off-site URLs are removed.
+        # Relay's authenticated response is the authority for citation hosts.
+        # Keep the array positions stable so answer markers such as [1] still
+        # refer to the corresponding entry after an unsafe URL is removed.
         def filter_source_citations(payload)
           return payload unless payload.is_a?(Hash) && payload.key?("citations")
 
           citations = Array(payload["citations"])
           payload.merge(
             "citations" => citations.map do |citation|
-              citation if citation.is_a?(Hash) && source_url_policy.allowed?(citation["url"])
+              citation if citation.is_a?(Hash) && valid_citation_url?(citation["url"])
             end
           )
         end
 
-        def source_url_policy
-          @source_url_policy ||= RefineryRelay::SourceUrlPolicy.new(
-            base_url: RefineryRelay.configuration.public_base_url.presence || request.base_url
-          )
+        def valid_citation_url?(value)
+          uri = URI.parse(value.to_s)
+          uri.is_a?(URI::HTTP) && uri.host.present?
+        rescue URI::InvalidURIError
+          false
         end
 
         def credit_limit_exhausted?(result)
