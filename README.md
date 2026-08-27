@@ -2,7 +2,7 @@
 
 A Rails engine that connects Refinery CMS content to Niimble Relay.
 
-This gem does not ship a visual implementation. It registers the `LLM Chat`
+This gem does not ship a visual implementation. It registers the `Relay Chat`
 (`llm_chat`) Pod type and renders only a `<relay-llm-widget>` mount element.
 Relay owns all browser UI, branding, styles, images, and interactive chat
 behavior.
@@ -19,19 +19,12 @@ The installer configures the backend routes and adds the Relay settings and
 source-tombstone migrations. It does not create an initializer or alter
 JavaScript, stylesheet, or Action Cable manifests.
 
-```ruby
-get "/refinery_relay/api/relay/chat/availability",
-    to: "refinery_relay/api/relay/chats#availability"
-post "/refinery_relay/api/relay/chat",
-     to: "refinery_relay/api/relay/chats#create"
-```
-
 Run `bin/rails db:migrate`, then open **Relay Settings** in the Refinery admin
-sidebar. This single page stores only the Relay chat URL/token, selected source
-types, the generated feed bearer token, and LLM widget markup in
-`refinery_relay_settings`. No Relay environment variables or host initializer
-are required. The optional API proxy remains available for Relay integrations;
-it renders no HTML or visual assets.
+sidebar. This single page stores selected source types, the generated feed
+bearer token, and direct Relay widget markup in `refinery_relay_settings`. No
+Relay environment variables or host initializer are required. The public Relay
+widget communicates directly with Relay using a public widget key; private chat
+credentials are never stored in the browser.
 
 The **Sources to ingest** checkboxes control which Refinery content families
 are exported by the direct feed: Pages, Blog posts, Works, Expertises, FAQs,
@@ -40,11 +33,15 @@ optional sources are skipped when their Refinery extension is not installed.
 
 ## Pod compatibility
 
-The gem continues to register the `LLM Chat` Pod type with
+The gem continues to register the `Relay Chat` Pod type with
 `refinerycms-pods`. Existing and new `llm_chat` pod records remain selectable.
+The engine also adds `llm_chat` automatically when a host layout passes an
+explicit `pod_types` list to Refinery's shared pod renderer, so host layouts do
+not need a Relay-specific edit. It is rendered once per view context to avoid
+duplicates across multiple pod regions.
 Use **Relay Settings → LLM widget** in Refinery admin to enter the Relay widget
 HTML/script. That trusted markup is rendered inside `<relay-llm-widget>` exactly
-where an LLM Chat Pod is placed.
+where a Relay Chat Pod is placed.
 
 ## Direct source feed
 

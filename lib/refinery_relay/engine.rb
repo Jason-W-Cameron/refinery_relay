@@ -28,6 +28,7 @@ module RefineryRelay
 
     config.to_prepare do
       RefineryRelay::PodRegistration.install!
+      RefineryRelay::PodRendering.install!
       RefineryRelay::Engine.install_source_sync_callbacks!
     end
 

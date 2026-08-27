@@ -3,12 +3,14 @@ RefineryRelay is installed.
 Next steps:
   1. Run `bin/rails db:migrate`.
   2. Open Refinery admin and select “Relay Settings” in the sidebar.
-  3. Enter the Relay chat URL and chat token, select the content sources, and save.
+  3. Select the content sources and paste Relay's public widget embed code, then save.
   4. Generate a bearer token and copy the feed endpoint into Relay's HTTP feed source.
 
-Backend API endpoints:
-  GET  /refinery_relay/api/relay/chat/availability
-  POST /refinery_relay/api/relay/chat
-  GET  /refinery_relay/api/relay/documents
+Backend API endpoint:
+  GET /refinery_relay/api/relay/documents
+
+For visitor chat, paste the public widget embed code copied from the Relay
+tenant's Chat widget section into Relay Settings → LLM widget. The public
+widget talks directly to Relay and does not require a private API token.
 
 The installer can be run again safely.

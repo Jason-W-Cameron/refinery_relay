@@ -1,5 +1,5 @@
 <%#
   Relay owns the widget implementation. This custom element is the only markup
-  supplied by the LLM Chat Pod; its trusted contents come from Refinery admin.
+  supplied by the Relay Chat Pod; its trusted contents come from Refinery admin.
 %>
 <relay-llm-widget><%= raw RefineryRelay::RelaySetting.current.widget_markup.to_s %></relay-llm-widget>

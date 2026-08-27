@@ -431,7 +431,7 @@
     "local_businesses" => "Business details and descriptions",
     "brands" => "Brand profiles"
   } %>
-  <% relay_configured = @relay_setting.chat_base_url.present? && @relay_setting.chat_token.present? %>
+  <% relay_configured = @relay_setting.source_token.present? && @relay_setting.widget_markup.present? %>
 
   <div class="rr-canvas">
     <div class="rr-hero">
@@ -443,7 +443,7 @@
       <div class="rr-hero-actions">
         <span class="rr-status <%= "rr-status--pending" unless relay_configured %>">
           <span class="rr-status-dot" aria-hidden="true"></span>
-          <%= relay_configured ? "Connection configured" : "Setup required" %>
+          <%= relay_configured ? "Direct widget configured" : "Setup required" %>
         </span>
         <%= button_to "Generate bearer token",
                       Rails.application.routes.url_helpers.refinery_relay_generate_bearer_token_path,
@@ -481,42 +481,6 @@
 
       <div class="rr-layout">
         <main class="rr-main">
-          <section class="rr-card">
-            <div class="rr-card-header">
-              <span class="rr-card-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8h1a4 4 0 0 1 0 8h-1M5 8h10v9a4 4 0 0 1-4 4H9a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>
-              </span>
-              <div>
-                <h3>Relay connection</h3>
-                <p>Set the Relay endpoint used by the Refinery chat integration.</p>
-              </div>
-            </div>
-            <div class="rr-card-body">
-              <div class="rr-grid">
-                <div class="rr-field">
-                  <div class="rr-label-row">
-                    <%= form.label :chat_base_url, "Relay chat URL", class: "rr-label" %>
-                  </div>
-                  <%= form.url_field :chat_base_url, class: "rr-input", placeholder: "https://relay.example" %>
-                  <p class="rr-hint">The base URL of your Niimble Relay installation.</p>
-                </div>
-                <div class="rr-field">
-                  <div class="rr-label-row">
-                    <%= form.label :chat_token, "Relay chat token", class: "rr-label" %>
-                    <% if @relay_setting.chat_token.present? %>
-                      <span class="rr-pill">Configured</span>
-                    <% end %>
-                  </div>
-                  <%= form.password_field :chat_token,
-                                           class: "rr-input",
-                                           autocomplete: "new-password",
-                                           placeholder: (@relay_setting.chat_token.present? ? "Leave blank to keep it" : "Paste the Relay chat token") %>
-                  <p class="rr-hint">Stored securely. Leave blank when you are not replacing the current value.</p>
-                </div>
-              </div>
-            </div>
-          </section>
-
           <section class="rr-card">
             <div class="rr-card-header">
               <span class="rr-card-icon" aria-hidden="true">
@@ -573,19 +537,19 @@
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
               </span>
               <div>
-                <h3>LLM widget</h3>
-                <p>Paste the Relay widget markup that should appear in each LLM Chat Pod.</p>
+                <h3>Direct Relay widget</h3>
+                <p>Paste the public widget embed code copied from Relay’s Chat widget section.</p>
               </div>
             </div>
             <div class="rr-card-body">
               <div class="rr-field">
-                <%= form.label :widget_markup, "Widget HTML / script", class: "rr-label" %>
+                <%= form.label :widget_markup, "Relay widget embed code", class: "rr-label" %>
                 <%= form.text_area :widget_markup,
                                    class: "rr-textarea",
                                    rows: 10,
                                    spellcheck: false,
-                                   placeholder: '<script src="https://relay.example/widget.js"></script>' %>
-                <p class="rr-hint">This trusted markup is rendered exactly where each LLM Chat Pod is placed.</p>
+                                   placeholder: '<script src="https://relay.example/niimble-relay-widget.js" defer></script>' %>
+                <p class="rr-hint">The public widget communicates directly with Relay. Configure the site origin in Relay and never paste a private chat token here.</p>
               </div>
             </div>
           </section>

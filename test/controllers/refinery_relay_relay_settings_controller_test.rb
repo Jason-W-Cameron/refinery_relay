@@ -18,7 +18,6 @@ class RefineryRelayRelaySettingsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_select "h2", "Relay Settings"
-    assert_select "input[name='relay_setting[chat_base_url]']"
     assert_select "input[value='pages']"
     assert_select "input[value='faqs']"
     assert_select "input[type='hidden'][name='relay_setting[source_types][]'][value='']"
@@ -28,18 +27,17 @@ class RefineryRelayRelaySettingsControllerTest < ActionDispatch::IntegrationTest
     assert_select "textarea[name='relay_setting[widget_markup]']"
     assert_select "input[name='relay_setting[redis_url]']", count: 0
     assert_select "input[name='relay_setting[sync_token]']", count: 0
-    assert_select "input[name='relay_setting[chat_tenant_key]']", count: 0
+    assert_select "input[name='relay_setting[chat_base_url]']", count: 0
+    assert_select "input[name='relay_setting[chat_token]']", count: 0
     assert_select "input[name='relay_setting[public_base_url]']", count: 0
     assert_equal "Relay Settings", Refinery::Plugins.registered["relay_settings"].title
   end
 
-  test "saves the connection, source types, and widget while preserving a blank chat token" do
-    setting = RefineryRelay::RelaySetting.create!(chat_token: "existing-chat-token", source_token: "existing-source-token")
+  test "saves source types and widget markup without exposing chat credentials" do
+    setting = RefineryRelay::RelaySetting.create!(source_token: "existing-source-token")
 
     patch SETTINGS_PATH, params: {
       relay_setting: {
-        chat_base_url: "https://relay.example/",
-        chat_token: "",
         source_types: [ "pages", "faqs", "not-a-source" ],
         widget_markup: '<script src="https://relay.example/widget.js"></script><div data-relay-widget></div>'
       }
@@ -47,9 +45,7 @@ class RefineryRelayRelaySettingsControllerTest < ActionDispatch::IntegrationTest
 
     assert_redirected_to SETTINGS_PATH
     setting.reload
-    assert_equal "existing-chat-token", setting.chat_token
     assert_equal "existing-source-token", setting.source_token
-    assert_equal "https://relay.example/", setting.chat_base_url
     assert_equal %w[pages faqs], setting.source_types
     assert_equal '<script src="https://relay.example/widget.js"></script><div data-relay-widget></div>', setting.widget_markup
   end

@@ -40,8 +40,7 @@ class RefineryRelayDisposableHostInstallTest < ActiveSupport::TestCase
 
   def assert_generated_host_files(host_root)
     routes = File.read(File.join(host_root, "config/routes.rb"))
-    assert_includes routes, 'get "/refinery_relay/api/relay/chat/availability"'
-    assert_includes routes, 'post "/refinery_relay/api/relay/chat"'
+    assert_not_includes routes, "/refinery_relay/api/relay/chat"
     assert_not_includes routes, "ActionCable"
     assert_empty Dir.glob(File.join(host_root, "config/initializers/refinery_relay.rb"))
     assert Dir.glob(File.join(host_root, "db/migrate/*_create_refinery_relay_settings.rb")).any?
@@ -49,20 +48,10 @@ class RefineryRelayDisposableHostInstallTest < ActiveSupport::TestCase
 
   def assert_host_boots(host_root)
     script = <<~RUBY
-      availability = Rails.application.routes.recognize_path(
-        "/refinery_relay/api/relay/chat/availability",
-        method: :get
-      )
-      chat = Rails.application.routes.recognize_path(
-        "/refinery_relay/api/relay/chat",
-        method: :post
-      )
       settings = Rails.application.routes.recognize_path(
         "/refinery/relay_settings",
         method: :get
       )
-      raise "availability route missing" unless availability[:controller] == "refinery_relay/api/relay/chats"
-      raise "chat route missing" unless chat[:controller] == "refinery_relay/api/relay/chats"
       raise "settings route missing" unless settings[:controller] == "refinery_relay/admin/relay_settings"
       raise "Relay settings plugin missing" unless Refinery::Plugins.registered.names.include?("relay_settings")
       puts "disposable host boot: OK"

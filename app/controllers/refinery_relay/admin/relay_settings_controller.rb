@@ -48,8 +48,6 @@ module RefineryRelay
 
       def relay_setting_params
         attributes = params.require(:relay_setting).permit(
-          :chat_base_url,
-          :chat_token,
           :widget_markup,
           source_types: []
         )

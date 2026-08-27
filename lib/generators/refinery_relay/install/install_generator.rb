@@ -6,8 +6,6 @@ require "rails/generators"
 module RefineryRelay
   module Generators
     class InstallGenerator < Rails::Generators::Base
-      CHAT_ROUTE = "/refinery_relay/api/relay/chat"
-      AVAILABILITY_ROUTE = "#{CHAT_ROUTE}/availability"
       source_root File.expand_path("templates", __dir__)
 
       def self.exit_on_failure?
@@ -33,37 +31,6 @@ module RefineryRelay
 
           Fix the listed requirements and run `bin/rails generate refinery_relay:install` again.
         MESSAGE
-      end
-
-      def install_routes
-        path = "config/routes.rb"
-        unless destination_file?(path)
-          say_status :warning, "#{path} not found; add the Refinery Relay chat routes manually"
-          return
-        end
-
-        content = destination_content(path)
-        availability_installed = route_installed?(content, "get", AVAILABILITY_ROUTE)
-        chat_installed = route_installed?(content, "post", CHAT_ROUTE)
-        if availability_installed && chat_installed
-          say_status :identical, path
-          return
-        end
-
-        routes = [ "# Niimble Relay API routes use direct host routes for Refinery routing-filter compatibility." ]
-        unless availability_installed
-          routes << <<~RUBY.chomp
-            get "#{AVAILABILITY_ROUTE}",
-                to: "refinery_relay/api/relay/chats#availability"
-          RUBY
-        end
-        unless chat_installed
-          routes << <<~RUBY.chomp
-            post "#{CHAT_ROUTE}",
-                 to: "refinery_relay/api/relay/chats#create"
-          RUBY
-        end
-        route routes.join("\n")
       end
 
       def install_source_tombstones_migration
@@ -142,10 +109,6 @@ module RefineryRelay
       def pods_api_available?
         pod_class = "Refinery::Pods::Pod".safe_constantize
         pod_class&.const_defined?(:POD_TYPES, false)
-      end
-
-      def route_installed?(content, verb, path)
-        content.match?(%r{^\s*#{verb}\s+["']#{Regexp.escape(path)}["']})
       end
 
     end

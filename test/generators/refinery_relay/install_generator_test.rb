@@ -17,8 +17,7 @@ class RefineryRelayInstallGeneratorTest < Rails::Generators::TestCase
     run_generator
 
     assert_file "config/routes.rb" do |content|
-      assert_includes content, 'get "/refinery_relay/api/relay/chat/availability"'
-      assert_includes content, 'post "/refinery_relay/api/relay/chat"'
+      assert_not_includes content, "/refinery_relay/api/relay/chat"
       assert_not_includes content, "ActionCable"
     end
 
@@ -38,13 +37,12 @@ class RefineryRelayInstallGeneratorTest < Rails::Generators::TestCase
     assert_includes File.read(settings_migration), "table.text :widget_markup"
   end
 
-  test "can be run twice without duplicate routes" do
+  test "can be run twice without adding chat proxy routes" do
     run_generator
     run_generator
 
     assert_file "config/routes.rb" do |content|
-      assert_equal 1, content.scan('get "/refinery_relay/api/relay/chat/availability"').length
-      assert_equal 1, content.scan('post "/refinery_relay/api/relay/chat"').length
+      assert_equal 0, content.scan('/refinery_relay/api/relay/chat').length
     end
   end
 
