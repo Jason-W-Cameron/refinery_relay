@@ -7,6 +7,7 @@ class RefineryRelayDocumentFeedTest < ActiveSupport::TestCase
   FakePod = Struct.new(:id, :position, :name, :pod_type, :body, :body2, :body3, :hidden_body, :updated_at,
                        :image, :mobile_image, :image2, :image3, :background_image, :file, :file2)
   FakePage = Struct.new(:id, :title, :slug, :url, :parts, :pods, :updated_at)
+  FakeFaq = Struct.new(:id, :question, :answer, :updated_at, :slug)
   FakeBinary = Struct.new(:url, :data)
   FakeImage = Struct.new(:id, :title, :alt, :image_mime_type, :updated_at, :url, :image) do
     def thumbnail(geometry:)
@@ -17,8 +18,9 @@ class RefineryRelayDocumentFeedTest < ActiveSupport::TestCase
   FakeResource = Struct.new(:id, :title, :file_mime_type, :updated_at, :url, :file)
 
   class TestFeed < RefineryRelay::DocumentFeed
-    def initialize(pages:, **options)
+    def initialize(pages:, source_records: {}, **options)
       @pages = pages
+      @source_records = source_records
       super(**options)
     end
 
@@ -35,6 +37,21 @@ class RefineryRelayDocumentFeedTest < ActiveSupport::TestCase
           @records.first(size)
         end
       end.new(pages)
+    end
+
+    def source_scope(source_type, last_id)
+      return page_scope(last_id) if source_type == "pages"
+
+      records = @source_records.fetch(source_type, []).select { |record| record.id > last_id }
+      Class.new do
+        def initialize(records)
+          @records = records
+        end
+
+        def limit(size)
+          @records.first(size)
+        end
+      end.new(records)
     end
   end
 
@@ -107,7 +124,7 @@ class RefineryRelayDocumentFeedTest < ActiveSupport::TestCase
     assert_equal "https://sit.example/terms%20and%20conditions", document.fetch("url")
   end
 
-  test "includes referenced Refinery images and files as Relay citation assets" do
+  test "excludes referenced images and files from the text-only Relay feed" do
     now = Time.utc(2026, 8, 25, 12, 0, 0)
     image = FakeImage.new(8, "Start line", "Runners at the start line", "image/jpeg", now,
                           "/system/images/start.jpg", FakeBinary.new("/system/images/start.jpg", "image-bytes"))
@@ -118,14 +135,27 @@ class RefineryRelayDocumentFeedTest < ActiveSupport::TestCase
     page = FakePage.new(7, "Race information", "race-information", "/race-information", [], [ pod ], now)
 
     document = TestFeed.new(pages: [ page ], cursor: nil, public_base_url: "https://sit.example").call.fetch("documents").first
-    assets = document.dig("metadata", "assets")
+    assert_nil document.dig("metadata", "assets")
+    assert_not_includes document.fetch("content"), "Parking layout"
+  end
 
-    assert_equal [ "images:8", "files:9" ], assets.map { |asset| asset.fetch("external_id") }
-    assert_equal "https://sit.example/system/images/start.jpg", assets.first.fetch("url")
-    assert_equal "https://sit.example/system/images/start.jpg?geometry=480x480%3E", assets.first.fetch("thumbnail_url")
-    assert_equal "image", assets.first.fetch("kind")
-    assert_equal "pdf", assets.last.fetch("kind")
-    assert_match(/\A[a-f0-9]{64}\z/, assets.first.fetch("content_hash"))
-    assert_includes document.fetch("content"), "Parking layout"
+  test "only emits the configured non-page sources" do
+    now = Time.utc(2026, 8, 25, 12, 0, 0)
+    faq = FakeFaq.new(4, "How does Relay work?", "Relay indexes the selected Refinery content.", now, nil)
+    page = FakePage.new(7, "Not selected", "not-selected", "/not-selected", [], [], now)
+
+    payload = TestFeed.new(
+      pages: [ page ],
+      source_records: { "faqs" => [ faq ] },
+      source_types: [ "faqs" ],
+      cursor: nil,
+      public_base_url: "https://sit.example"
+    ).call
+
+    assert_equal [ "faqs:4" ], payload.fetch("documents").map { |document| document.fetch("external_id") }
+    document = payload.fetch("documents").first
+    assert_equal "faq", document.fetch("content_type")
+    assert_equal "https://sit.example/faqs/4", document.fetch("url")
+    assert_includes document.fetch("content"), "Relay indexes the selected Refinery content."
   end
 end

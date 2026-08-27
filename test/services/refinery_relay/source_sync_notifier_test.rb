@@ -5,16 +5,16 @@ require "net/http"
 
 class RefineryRelaySourceSyncNotifierTest < ActiveSupport::TestCase
   setup do
-    RefineryRelay.reset_configuration!
-    RefineryRelay.configure do |config|
-      config.chat_base_url = "https://relay.example/"
-      config.sync_token = "sync-token"
-      config.sync_source_id = "source uuid"
-    end
+    RefineryRelay::RelaySetting.delete_all
+    RefineryRelay::RelaySetting.create!(
+      chat_base_url: "https://relay.example/",
+      sync_token: "sync-token",
+      sync_source_id: "source uuid"
+    )
   end
 
   teardown do
-    RefineryRelay.reset_configuration!
+    RefineryRelay::RelaySetting.delete_all
   end
 
   test "notifies Relay with the sync credential after source content changes" do
@@ -36,7 +36,7 @@ class RefineryRelaySourceSyncNotifierTest < ActiveSupport::TestCase
   end
 
   test "does not queue a notification until Relay source-sync settings are present" do
-    RefineryRelay.configuration.sync_token = nil
+    RefineryRelay::RelaySetting.current.update!(sync_token: nil)
 
     refute RefineryRelay::SourceSyncNotifier.enqueue
   end

@@ -6,6 +6,4 @@ RefineryRelay::Engine.routes.draw do
       get "documents", to: "documents#index"
     end
   end
-
-  get "admin/settings", to: "admin/settings#show"
 end

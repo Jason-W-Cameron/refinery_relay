@@ -13,15 +13,16 @@ class RefineryRelayChatClientTest < ActiveSupport::TestCase
   end
 
   setup do
-    RefineryRelay.configure_from_env!({
-      "RELAY_PUBLIC_BASE_URL" => "https://refinery.example",
-      "RELAY_CHAT_BASE_URL" => "https://relay.example/",
-      "RELAY_CHAT_TOKEN" => "secret-token"
-    })
+    RefineryRelay::RelaySetting.delete_all
+    RefineryRelay::RelaySetting.create!(
+      public_base_url: "https://refinery.example",
+      chat_base_url: "https://relay.example/",
+      chat_token: "secret-token"
+    )
   end
 
   teardown do
-    RefineryRelay.reset_configuration!
+    RefineryRelay::RelaySetting.delete_all
   end
 
   test "posts the conversation payload to Relay" do
@@ -65,7 +66,7 @@ class RefineryRelayChatClientTest < ActiveSupport::TestCase
   end
 
   test "raises a configuration error when the Relay endpoint is missing" do
-    RefineryRelay.configure { |config| config.chat_base_url = "" }
+    RefineryRelay::RelaySetting.current.update!(chat_base_url: "")
 
     error = assert_raises RefineryRelay::ChatClient::ConfigurationError do
       RefineryRelay::ChatClient.call(conversation_id: nil, message: "Hello", visitor_id: nil, context: {})

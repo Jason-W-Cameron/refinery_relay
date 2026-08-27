@@ -30,9 +30,7 @@ module RefineryRelay
         read_timeout: configuration.chat_read_timeout_seconds
       ) { |http| http.request(request_for(uri)) }
 
-      payload = parse_payload(response)
-      payload = CitationImageResolver.enrich(payload) if response.is_a?(Net::HTTPSuccess)
-      Response.new(status: response.code.to_i, payload:)
+      Response.new(status: response.code.to_i, payload: parse_payload(response))
     rescue Net::OpenTimeout, Net::ReadTimeout, SocketError, Errno::ECONNREFUSED, URI::InvalidURIError
       raise UpstreamError, "The Relay chat service is unavailable. Please try again shortly."
     end

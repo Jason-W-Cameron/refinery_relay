@@ -1,0 +1,73 @@
+# frozen_string_literal: true
+
+require "test_helper"
+
+class RefineryRelayRelaySettingsControllerTest < ActionDispatch::IntegrationTest
+  SETTINGS_PATH = "/refinery/relay_settings"
+
+  setup do
+    RefineryRelay::RelaySetting.delete_all
+  end
+
+  teardown do
+    RefineryRelay::RelaySetting.delete_all
+  end
+
+  test "shows the single Relay settings page in the Refinery admin" do
+    get SETTINGS_PATH
+
+    assert_response :success
+    assert_select "h2", "Relay Settings"
+    assert_select "input[name='relay_setting[chat_base_url]']"
+    assert_select "input[value='pages']"
+    assert_select "input[value='faqs']"
+    assert_select "input[type='hidden'][name='relay_setting[source_types][]'][value='']"
+    assert_select "#relay-feed-endpoint"
+    assert_select "form button", "Generate bearer token"
+    assert_select "textarea[name='relay_setting[widget_markup]']"
+    assert_select "input[name='relay_setting[redis_url]']", count: 0
+    assert_select "input[name='relay_setting[sync_token]']", count: 0
+    assert_select "input[name='relay_setting[chat_tenant_key]']", count: 0
+    assert_select "input[name='relay_setting[public_base_url]']", count: 0
+    assert_equal "Relay Settings", Refinery::Plugins.registered["relay_settings"].title
+  end
+
+  test "saves the connection, source types, and widget while preserving a blank chat token" do
+    setting = RefineryRelay::RelaySetting.create!(chat_token: "existing-chat-token", source_token: "existing-source-token")
+
+    patch SETTINGS_PATH, params: {
+      relay_setting: {
+        chat_base_url: "https://relay.example/",
+        chat_token: "",
+        source_types: [ "pages", "faqs", "not-a-source" ],
+        widget_markup: '<script src="https://relay.example/widget.js"></script><div data-relay-widget></div>'
+      }
+    }
+
+    assert_redirected_to SETTINGS_PATH
+    setting.reload
+    assert_equal "existing-chat-token", setting.chat_token
+    assert_equal "existing-source-token", setting.source_token
+    assert_equal "https://relay.example/", setting.chat_base_url
+    assert_equal %w[pages faqs], setting.source_types
+    assert_equal '<script src="https://relay.example/widget.js"></script><div data-relay-widget></div>', setting.widget_markup
+  end
+
+  test "allows all sources to be disabled" do
+    patch SETTINGS_PATH, params: { relay_setting: { source_types: [] } }
+
+    assert_redirected_to SETTINGS_PATH
+    assert_equal [], RefineryRelay::RelaySetting.current.source_types
+  end
+
+  test "generates a bearer token and displays it once for copying" do
+    post "/refinery/relay_settings/generate_bearer_token"
+
+    assert_redirected_to SETTINGS_PATH
+    token = RefineryRelay::RelaySetting.current.source_token
+    assert_predicate token, :present?
+
+    follow_redirect!
+    assert_select "#relay-generated-token[value='#{token}']"
+  end
+end

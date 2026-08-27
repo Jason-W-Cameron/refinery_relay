@@ -1,0 +1,6 @@
+en:
+  refinery:
+    plugins:
+      relay_settings:
+        title: Relay Settings
+        description: Configure the Niimble Relay integration.

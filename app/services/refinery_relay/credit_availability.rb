@@ -3,6 +3,7 @@
 require "securerandom"
 require "time"
 require "redis"
+require "uri"
 
 module RefineryRelay
   class CreditAvailability
@@ -18,16 +19,13 @@ module RefineryRelay
 
     def self.clear_unavailability! = new.clear_unavailability!
 
-    def self.stream_name
-      "relay_chat:#{RefineryRelay.configuration.chat_tenant_key}"
-    end
-
-    def initialize(redis: nil, broadcaster: nil)
-      @redis = redis || RefineryRelay.configuration.redis || default_redis
-      @broadcaster = broadcaster || RefineryRelay.configuration.broadcaster || ActionCable.server
+    def initialize(redis: nil)
+      @redis = redis || configured_redis
     end
 
     def available?
+      return true unless redis
+
       value = redis.get(cache_key)
       return true if value.blank?
 
@@ -41,6 +39,8 @@ module RefineryRelay
     end
 
     def mark_unavailable!(resets_at:)
+      return false unless redis
+
       reset_at = Time.iso8601(resets_at.to_s)
       return false unless reset_at.future?
 
@@ -53,13 +53,14 @@ module RefineryRelay
         true
       end
 
-      broadcaster.broadcast(self.class.stream_name, { type: "chat_unavailable" }) if changed
       changed
     rescue Redis::BaseError, ArgumentError, TypeError => e
       raise CacheUnavailable, e.message
     end
 
     def clear_unavailability!
+      return true unless redis
+
       redis.del(cache_key)
       true
     rescue Redis::BaseError => e
@@ -68,12 +69,15 @@ module RefineryRelay
 
     private
 
-    attr_reader :redis, :broadcaster
+    attr_reader :redis
 
-    def default_redis
-      return $redis if defined?($redis) && $redis
+    def configured_redis
+      redis_url = RefineryRelay.configuration.redis_url.to_s
+      return nil if redis_url.blank?
 
-      raise CacheUnavailable, "Redis has not been configured for RefineryRelay."
+      Redis.new(url: redis_url)
+    rescue ArgumentError, URI::InvalidURIError => error
+      raise CacheUnavailable, "Redis has not been configured for RefineryRelay: #{error.message}"
     end
 
     def cache_key

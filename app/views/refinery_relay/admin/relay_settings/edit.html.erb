@@ -1,0 +1,90 @@
+<% if flash[:relay_source_token].present? %>
+  <section class="relay-generated-token">
+    <h2>Bearer access token</h2>
+    <p>Copy this token into the Relay source now. For security, it is shown only once.</p>
+    <input id="relay-generated-token" type="text" class="widest" value="<%= flash[:relay_source_token] %>" readonly>
+    <button type="button" class="button" onclick="navigator.clipboard.writeText(document.getElementById('relay-generated-token').value)">Copy token</button>
+  </section>
+<% end %>
+
+<aside id="actions" class="relay-token-actions">
+  <ul>
+    <li><%= button_to "Generate bearer token", Rails.application.routes.url_helpers.refinery_relay_generate_bearer_token_path, method: :post, class: "button" %></li>
+  </ul>
+</aside>
+
+<%= form_with model: @relay_setting,
+              url: Rails.application.routes.url_helpers.refinery_relay_settings_path,
+              method: :patch,
+              local: true do |form| %>
+  <%= render "/refinery/admin/error_messages", object: @relay_setting, include_object_name: true %>
+
+  <section id="records">
+    <h2>Relay Settings</h2>
+    <p>Configure the Relay connection, the content types to ingest, and the LLM widget.</p>
+
+    <fieldset>
+      <legend>Chat service</legend>
+
+      <div class="field">
+        <%= form.label :chat_base_url, "Relay chat URL" %>
+        <%= form.url_field :chat_base_url, class: "widest", placeholder: "https://relay.example" %>
+      </div>
+      <div class="field">
+        <%= form.label :chat_token, "Relay chat token" %>
+        <%= form.password_field :chat_token, class: "widest", autocomplete: "new-password", placeholder: (@relay_setting.chat_token.present? ? "Configured — enter a new value to replace it" : nil) %>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>Content source</legend>
+
+      <div class="field">
+        <%= form.label :source_types, "Sources to ingest" %>
+        <%= form.hidden_field :source_types, multiple: true, value: "" %>
+        <div class="checkboxes">
+          <% RefineryRelay::DocumentFeed::SOURCE_OPTIONS.each do |source| %>
+            <label>
+              <%= form.check_box :source_types,
+                                 { multiple: true, include_hidden: false },
+                                 source.fetch(:key),
+                                 nil %>
+              <%= source.fetch(:label) %>
+            </label>
+          <% end %>
+        </div>
+        <p class="help">Select the Refinery content types that Relay should ingest. Optional extensions are ignored when they are not installed.</p>
+      </div>
+
+      <div class="field">
+        <label for="relay-feed-endpoint">Feed endpoint</label>
+        <input id="relay-feed-endpoint" type="text" class="widest" value="<%= relay_documents_endpoint %>" readonly>
+        <p class="help">Copy this URL into Relay as an HTTP feed source.</p>
+        <button type="button" class="button" onclick="navigator.clipboard.writeText(document.getElementById('relay-feed-endpoint').value)">Copy endpoint</button>
+      </div>
+      <div class="field">
+        <p>Generate a bearer token, then paste it into the Relay source’s Bearer access token field.</p>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>LLM widget</legend>
+
+      <div class="field">
+        <%= form.label :widget_markup, "Widget HTML / script" %>
+        <%= form.text_area :widget_markup,
+                           class: "widest",
+                           rows: 12,
+                           spellcheck: false,
+                           placeholder: '<script src="https://relay.example/widget.js"></script>' %>
+        <p class="help">This trusted markup is rendered exactly where each LLM Chat Pod is placed.</p>
+      </div>
+    </fieldset>
+  </section>
+
+  <aside id="actions">
+    <ul>
+      <li><%= form.submit "Save Relay settings", class: "wymupdate button" %></li>
+    </ul>
+  </aside>
+<% end %>

@@ -9,17 +9,61 @@ require "time"
 require "uri"
 
 module RefineryRelay
-  # Builds Relay documents directly from Refinery's published Page and Pod
-  # records. This deliberately avoids the optional /nlweb/rss endpoint: that
-  # route is not part of a normal Refinery installation and cannot represent
-  # all of a page's associated Pods reliably.
+  # Builds Relay documents directly from Refinery records. This deliberately
+  # avoids the optional /nlweb/rss endpoint: that route is not part of a
+  # normal Refinery installation and cannot represent all source types or a
+  # page's associated Pods reliably.
   class DocumentFeed
     DEFAULT_PAGE_SIZE = 25
     MAX_PAGE_SIZE = 100
     POD_TEXT_FIELDS = %w[body body2 body3 hidden_body].freeze
-    PAGE_IMAGE_FIELDS = %i[footer_image footer_mobile_image].freeze
-    POD_IMAGE_FIELDS = %i[image mobile_image image2 image3 background_image].freeze
-    POD_FILE_FIELDS = %i[file file2].freeze
+    SOURCE_OPTIONS = [
+      { key: "pages", label: "Pages" },
+      { key: "blog_posts", label: "Blog posts" },
+      { key: "works", label: "Works" },
+      { key: "expertises", label: "Expertises" },
+      { key: "faqs", label: "FAQs" },
+      { key: "industries", label: "Industries" },
+      { key: "local_businesses", label: "Local businesses" },
+      { key: "brands", label: "Brands" }
+    ].freeze
+    SOURCE_TYPES = SOURCE_OPTIONS.map { |source| source.fetch(:key) }.freeze
+    SOURCE_DEFINITIONS = {
+      "pages" => { model: "Refinery::Page" },
+      "blog_posts" => {
+        model: "Refinery::Blog::Post", title: :title,
+        fields: %i[short_description custom_teaser body], path: "/blog"
+      },
+      "works" => {
+        model: "Refinery::Works::Work", title: :title,
+        fields: %i[industry short_description jumbo body_title body_subtitle body_description quote url],
+        path: "/works"
+      },
+      "expertises" => {
+        model: "Refinery::Expertises::Expertise", title: :title,
+        fields: %i[banner_text short_subtitle short_description jumbo quote url seo_title seo_description],
+        path: "/expertises"
+      },
+      "faqs" => {
+        model: "Refinery::Faqs::Faq", title: :question, fields: %i[answer], path: "/faqs"
+      },
+      "industries" => {
+        model: "Refinery::Industries::Industry", title: :name, fields: [], path: "/industries"
+      },
+      "local_businesses" => {
+        model: "Refinery::LocalBusinesses::LocalBusiness", title: :name,
+        fields: %i[street_address address_locality address_region postal_code address_country telephone website_url description],
+        path: "/local_businesses"
+      },
+      "brands" => {
+        model: "Refinery::Brands::Brand", title: :title, fields: %i[year url], path: "/brands"
+      }
+    }.freeze
+
+    def self.source_type_for(model)
+      model_name = model.respond_to?(:name) ? model.name.to_s : model.to_s
+      SOURCE_DEFINITIONS.find { |_source_type, definition| definition.fetch(:model) == model_name }&.first
+    end
 
     class InvalidCursor < StandardError; end
 
@@ -27,10 +71,11 @@ module RefineryRelay
       new(cursor: cursor, public_base_url: public_base_url).call
     end
 
-    def initialize(cursor:, public_base_url:, page_size: DEFAULT_PAGE_SIZE)
+    def initialize(cursor:, public_base_url:, page_size: DEFAULT_PAGE_SIZE, source_types: nil)
       @cursor = decode_cursor(cursor)
       @public_base_url = public_base_url.to_s.sub(%r{/+\z}, "")
       @page_size = [[page_size.to_i, 1].max, MAX_PAGE_SIZE].min
+      @source_types = normalize_source_types(source_types || RelaySetting.current.source_types)
     end
 
     def call
@@ -47,17 +92,30 @@ module RefineryRelay
 
     private
 
-    attr_reader :cursor, :public_base_url, :page_size
+    attr_reader :cursor, :public_base_url, :page_size, :source_types
 
     def cursor_state
-      return { "mode" => "tombstones", "last_id" => 0 } if cursor.blank? || cursor["mode"] == "complete"
+      return tombstone_state if cursor.blank? || cursor["mode"] == "complete"
+
       mode = cursor["mode"] == "snapshot" ? "pages" : cursor["mode"]
-      raise InvalidCursor unless %w[tombstones pages].include?(mode)
+      if mode == "pages"
+        return source_state(0, cursor.fetch("last_id"))
+      end
+      raise InvalidCursor unless %w[tombstones sources].include?(mode)
+
+      if cursor.key?("source_types") && normalize_source_types(cursor["source_types"]) != source_types
+        return tombstone_state
+      end
+
+      return tombstone_state if mode == "tombstones"
 
       last_id = Integer(cursor.fetch("last_id"))
       raise InvalidCursor if last_id.negative?
 
-      { "mode" => mode, "last_id" => last_id }
+      source_index = Integer(cursor.fetch("source_index"))
+      raise InvalidCursor if source_index.negative?
+
+      source_state(source_index, last_id)
     rescue KeyError, ArgumentError, TypeError
       raise InvalidCursor
     end
@@ -65,65 +123,121 @@ module RefineryRelay
     def documents_for(state)
       if state.fetch("mode") == "tombstones"
         tombstones, more_tombstones = tombstone_batch(state.fetch("last_id"))
-        return [ tombstones.map { |tombstone| deleted_document(tombstone) }, { "mode" => "tombstones", "last_id" => tombstones.last.id } ] if more_tombstones
+        return [ tombstones.map { |tombstone| deleted_document(tombstone) }, tombstone_state(tombstones.last.id) ] if more_tombstones
 
         remaining = page_size - tombstones.length
-        pages, more_pages = page_batch(0, remaining)
-        next_state = if more_pages
-          { "mode" => "pages", "last_id" => pages.last.id }
-        else
-          { "mode" => "complete" }
-        end
-        return [ tombstones.map { |tombstone| deleted_document(tombstone) } + pages.map { |page| document_for(page) }, next_state ]
+        documents, next_state = source_documents(0, 0, remaining)
+        return [ tombstones.map { |tombstone| deleted_document(tombstone) } + documents, next_state ]
       end
 
-      pages, more_pages = page_batch(state.fetch("last_id"), page_size)
-      next_state = more_pages ? { "mode" => "pages", "last_id" => pages.last.id } : { "mode" => "complete" }
-      [ pages.map { |page| document_for(page) }, next_state ]
+      source_documents(state.fetch("source_index"), state.fetch("last_id"), page_size)
     end
 
-    def page_batch(last_id, limit)
+    def source_documents(source_index, last_id, limit)
+      documents = []
+      while limit.positive? && source_index < source_types.length
+        source_type = source_types.fetch(source_index)
+        records, more_records = source_batch(source_type, last_id, limit)
+        documents.concat(records.map { |record| document_for_source(record, source_type) })
+        limit -= records.length
+
+        if more_records
+          return [ documents, source_state(source_index, records.last.id) ]
+        end
+
+        source_index += 1
+        last_id = 0
+      end
+
+      [ documents, complete_state ]
+    end
+
+    def source_batch(source_type, last_id, limit)
       return [ [], false ] if limit <= 0
 
-      records = page_scope(last_id).limit(limit + 1).to_a
+      scope = source_scope(source_type, last_id)
+      return [ [], false ] unless scope
+
+      records = scope.limit(limit + 1).to_a
       [ records.first(limit), records.length > limit ]
+    rescue ActiveRecord::StatementInvalid, NameError, NoMethodError
+      [ [], false ]
     end
 
     def tombstone_batch(last_id)
+      return [ [], false ] if source_types.empty?
+
       tombstone_model = RefineryRelay::SourceTombstone
       return [ [], false ] unless tombstone_model.available?
 
-      records = tombstone_model.where("id > ?", last_id).order("id ASC").limit(page_size + 1).to_a
+      records = []
+      cursor_id = last_id
+      loop do
+        batch = tombstone_model.where("id > ?", cursor_id).order("id ASC").limit(page_size + 1).to_a
+        break if batch.empty?
+
+        cursor_id = batch.last.id
+        records.concat(batch.select { |record| tombstone_matches_source?(record) })
+        break if records.length > page_size || batch.length <= page_size
+      end
       [ records.first(page_size), records.length > page_size ]
     rescue NameError
       [ [], false ]
+    end
+
+    def tombstone_matches_source?(tombstone)
+      source_types.any? { |source_type| tombstone.external_id.to_s.start_with?("#{source_type}:") }
     end
 
     def deleted_document(tombstone)
       { "external_id" => tombstone.external_id, "deleted" => true }
     end
 
+    def source_scope(source_type, last_id)
+      return page_scope(last_id) if source_type == "pages"
+
+      definition = SOURCE_DEFINITIONS.fetch(source_type)
+      model = definition.fetch(:model).safe_constantize
+      return unless model
+
+      relation = model.respond_to?(:live) ? model.live : model.all
+      relation.where(model.arel_table[:id].gt(last_id)).order(id: :asc)
+    end
+
     def page_scope(last_id)
       ::Refinery::Page.live.where("refinery_pages.id > ?", last_id).order("refinery_pages.id ASC")
+    end
+
+    def tombstone_state(last_id = 0)
+      { "mode" => "tombstones", "last_id" => last_id, "source_types" => source_types }
+    end
+
+    def source_state(source_index, last_id)
+      { "mode" => "sources", "source_index" => source_index, "last_id" => Integer(last_id), "source_types" => source_types }
+    end
+
+    def complete_state
+      { "mode" => "complete", "source_types" => source_types }
+    end
+
+    def normalize_source_types(values)
+      Array(values).map(&:to_s).intersection(SOURCE_TYPES)
     end
 
     def document_for(page)
       title = page.title.to_s.squish.presence || "Untitled page"
       parts = page_parts(page)
       pods = page_pods(page)
-      assets = page_assets(page, pods)
-      asset_text = asset_search_text(assets)
-      content_blocks = page_content_blocks(title, parts, pods, asset_text)
-      content = ([ "Title: #{title}" ] + part_content(parts) + pod_content(pods) + asset_text).join("\n\n")
-      updated_at = ([ page.updated_at ] + parts.map(&:updated_at) + pods.map(&:updated_at) + [ asset_updated_at(page, pods) ]).compact.max || Time.current
+      content_blocks = page_content_blocks(title, parts, pods)
+      content = ([ "Title: #{title}" ] + part_content(parts) + pod_content(pods)).join("\n\n")
+      updated_at = ([ page.updated_at ] + parts.map(&:updated_at) + pods.map(&:updated_at)).compact.max || Time.current
       metadata = {
         "source" => "refinery",
         "page_id" => page.id,
         "slug" => page.respond_to?(:slug) ? page.slug : nil,
         "pod_types" => pods.map { |pod| pod.respond_to?(:pod_type) ? pod.pod_type.to_s : nil }.compact.uniq.sort,
         "page_part_count" => parts.length,
-        "pod_count" => pods.length,
-        "assets" => assets.presence
+        "pod_count" => pods.length
       }.delete_if { |_key, value| value.nil? }
       document = {
         "external_id" => "pages:#{page.id}",
@@ -138,6 +252,62 @@ module RefineryRelay
       }
       document["content_hash"] = Digest::SHA256.hexdigest(JSON.generate(canonicalize(document.except("updated_at"))))
       document
+    end
+
+    def document_for_source(record, source_type)
+      return document_for(record) if source_type == "pages"
+
+      definition = SOURCE_DEFINITIONS.fetch(source_type)
+      title = plain_text(record.public_send(definition.fetch(:title))).presence || "Untitled #{source_type.humanize.downcase}"
+      fields = definition.fetch(:fields).filter_map do |field|
+        next unless record.respond_to?(field)
+
+        text = plain_text(record.public_send(field))
+        [ field.to_s.humanize, text ] if text.present?
+      end
+      pods = source_type.in?(%w[works expertises]) ? page_pods(record) : []
+      content = ([ "Title: #{title}" ] + fields.map { |label, text| "#{label}: #{text}" } + pod_content(pods)).join("\n\n")
+      updated_at = ([ record.updated_at, record.respond_to?(:published_at) ? record.published_at : nil ] + pods.map(&:updated_at)).compact.max || Time.current
+      metadata = {
+        "source" => "refinery",
+        "source_type" => source_type,
+        "record_id" => record.id
+      }
+      document = {
+        "external_id" => "#{source_type}:#{record.id}",
+        "title" => title,
+        "url" => source_url(record, definition.fetch(:path)),
+        "content" => content,
+        "content_type" => source_type.singularize,
+        "language" => ::I18n.locale.to_s.presence || "en",
+        "updated_at" => updated_at.utc.iso8601,
+        "content_blocks" => source_content_blocks(title, fields, pods),
+        "metadata" => metadata
+      }
+      document["content_hash"] = Digest::SHA256.hexdigest(JSON.generate(canonicalize(document.except("updated_at"))))
+      document
+    end
+
+    def source_content_blocks(title, fields, pods)
+      blocks = [ { "kind" => "heading", "level" => 1, "text" => title } ]
+      fields.each do |label, value|
+        blocks << { "kind" => "heading", "level" => 2, "text" => label }
+        blocks.concat(html_blocks(value).presence || [ { "kind" => "paragraph", "text" => value } ])
+      end
+      blocks + pod_blocks(pods)
+    end
+
+    def source_url(record, collection_path)
+      path = if record.respond_to?(:custom_url) && record.custom_url.present?
+        record.custom_url.to_s
+      elsif record.respond_to?(:url) && record.url.present?
+        record.url.to_s
+      else
+        slug = record.respond_to?(:slug) && record.slug.present? ? record.slug : record.id
+        "#{collection_path}/#{slug}"
+      end
+      candidate = path.match?(%r{\Ahttps?://}i) ? path : "#{public_base_url}#{path.start_with?("/") ? path : "/#{path}"}"
+      normalized_http_url(candidate) || public_base_url
     end
 
     def page_parts(page)
@@ -176,18 +346,9 @@ module RefineryRelay
     # Relay uses structured blocks to retain headings while it creates
     # embeddings. This is the same contract used by the modern Comrades CMS,
     # adapted to Refinery's page parts and legacy Pods records.
-    def page_content_blocks(title, parts, pods, asset_text)
+    def page_content_blocks(title, parts, pods)
       [ { "kind" => "heading", "level" => 1, "text" => title } ] +
-        page_part_blocks(parts) + pod_blocks(pods) + asset_blocks(asset_text)
-    end
-
-    def asset_blocks(asset_text)
-      return [] if asset_text.empty?
-
-      [
-        { "kind" => "heading", "level" => 2, "text" => "Related files and images" },
-        { "kind" => "list", "items" => asset_text }
-      ]
+        page_part_blocks(parts) + pod_blocks(pods)
     end
 
     def page_part_blocks(parts)
@@ -243,123 +404,6 @@ module RefineryRelay
       pod.sub_title.to_s.squish
     end
 
-    def page_assets(page, pods)
-      records = []
-      records.concat(media_records(page, PAGE_IMAGE_FIELDS, "image"))
-      pods.each do |pod|
-        records.concat(media_records(pod, POD_IMAGE_FIELDS, "image"))
-        records.concat(media_records(pod, POD_FILE_FIELDS, "file"))
-      end
-
-      records.each_with_object({}) do |(kind, record), assets|
-        asset = media_asset(kind, record)
-        assets[asset.fetch("external_id")] ||= asset if asset
-      end.values
-    end
-
-    def asset_updated_at(page, pods)
-      records = media_records(page, PAGE_IMAGE_FIELDS, "image")
-      pods.each do |pod|
-        records.concat(media_records(pod, POD_IMAGE_FIELDS, "image"))
-        records.concat(media_records(pod, POD_FILE_FIELDS, "file"))
-      end
-      records.map { |_kind, record| record.updated_at if record.respond_to?(:updated_at) }.compact.max
-    end
-
-    def media_records(record, fields, kind)
-      fields.each_with_object([]) do |field, records|
-        next unless record.respond_to?(field)
-
-        attachment = record.public_send(field)
-        records << [ kind, attachment ] if attachment.present?
-      rescue StandardError
-        next
-      end
-    end
-
-    def media_asset(kind, record)
-      url = media_url(record)
-      return if url.blank?
-
-      attachment = kind == "image" ? :image : :file
-      external_id = "#{kind == "image" ? "images" : "files"}:#{record.id}"
-      asset = {
-        "external_id" => external_id,
-        "kind" => kind == "image" ? "image" : media_kind(record),
-        "url" => url,
-        "mime_type" => media_mime_type(record),
-        "content_hash" => media_content_hash(record, attachment),
-        "caption" => media_title(record),
-        "alt_text" => media_alt_text(record),
-        "metadata" => {
-          "refinery_id" => record.id,
-          "refinery_attachment" => attachment.to_s
-        }
-      }
-      thumbnail_url = media_thumbnail_url(record) if kind == "image"
-      asset["thumbnail_url"] = thumbnail_url if thumbnail_url.present?
-      asset.delete_if { |_key, value| value.nil? || value == "" }
-    rescue StandardError
-      nil
-    end
-
-    def media_url(record)
-      return unless record.respond_to?(:url)
-
-      absolute_http_url(record.url)
-    end
-
-    def media_thumbnail_url(record)
-      return unless record.respond_to?(:thumbnail)
-
-      absolute_http_url(record.thumbnail(geometry: "480x480>").url)
-    rescue StandardError
-      nil
-    end
-
-    def media_kind(record)
-      media_mime_type(record) == "application/pdf" ? "pdf" : "file"
-    end
-
-    def media_mime_type(record)
-      return record.mime_type.to_s if record.respond_to?(:mime_type) && record.mime_type.present?
-      return record.image_mime_type.to_s if record.respond_to?(:image_mime_type) && record.image_mime_type.present?
-      return record.file_mime_type.to_s if record.respond_to?(:file_mime_type) && record.file_mime_type.present?
-
-      "application/octet-stream"
-    end
-
-    def media_content_hash(record, attachment)
-      value = record.public_send(attachment) if record.respond_to?(attachment)
-      data = value.data if value.respond_to?(:data)
-      return Digest::SHA256.hexdigest(data) if data.is_a?(String)
-
-      Digest::SHA256.hexdigest([
-        record.respond_to?(:id) ? record.id : nil,
-        record.respond_to?(:updated_at) ? record.updated_at&.utc&.iso8601 : nil,
-        record.respond_to?(:size) ? record.size : nil,
-        record.respond_to?(:url) ? record.url : nil
-      ].join("\u0000"))
-    rescue StandardError
-      Digest::SHA256.hexdigest(record.id.to_s)
-    end
-
-    def media_title(record)
-      record.respond_to?(:title) ? record.title.to_s.squish.presence : nil
-    end
-
-    def media_alt_text(record)
-      return unless record.respond_to?(:alt)
-
-      record.alt.to_s.squish.presence
-    end
-
-    def asset_search_text(assets)
-      assets.map do |asset|
-        [ asset["caption"], asset["alt_text"], "Attached #{asset["kind"]}: #{asset["url"]}" ].compact.uniq.join(" — ")
-      end
-    end
-
     def html_blocks(value)
       fragment = Nokogiri::HTML.fragment(value.to_s)
       fragment.css("script, style, template, noscript").remove
@@ -411,12 +455,6 @@ module RefineryRelay
 
       fallback = page.respond_to?(:slug) && page.slug.to_s != "home" ? "/#{page.slug}" : "/"
       normalized_http_url("#{public_base_url}#{fallback}") || public_base_url
-    end
-
-    def absolute_http_url(value)
-      raw_value = value.to_s
-      candidate = raw_value =~ %r{\Ahttps?://}i ? raw_value : "#{public_base_url}/#{raw_value.sub(%r{\A/+}, "")}"
-      normalized_http_url(candidate)
     end
 
     def normalized_http_url(value)

@@ -6,18 +6,8 @@ require "rails/generators"
 module RefineryRelay
   module Generators
     class InstallGenerator < Rails::Generators::Base
-      JAVASCRIPT_DIRECTIVE = "//= require refinery_relay/chat"
-      STYLESHEET_DIRECTIVE = "*= require refinery_relay/application"
       CHAT_ROUTE = "/refinery_relay/api/relay/chat"
       AVAILABILITY_ROUTE = "#{CHAT_ROUTE}/availability"
-      CABLE_MOUNT = 'mount ActionCable.server => "/cable"'
-      REQUIRED_ENVIRONMENT_VARIABLES = %w[
-        REDIS_URL
-        RELAY_CHAT_BASE_URL
-        RELAY_CHAT_TOKEN
-        RELAY_PUBLIC_BASE_URL
-      ].freeze
-
       source_root File.expand_path("templates", __dir__)
 
       def self.exit_on_failure?
@@ -32,8 +22,8 @@ module RefineryRelay
       end
 
       # Stop before changing the host when its required integration points are
-      # missing. A successful generator run must result in a usable chat Pod,
-      # rather than a partially installed engine that fails later at runtime.
+      # missing. A successful generator run must result in a usable backend
+      # integration, rather than a partially installed engine that fails later.
       def preflight
         failures = preflight_failures
         return if failures.empty?
@@ -43,13 +33,6 @@ module RefineryRelay
 
           Fix the listed requirements and run `bin/rails generate refinery_relay:install` again.
         MESSAGE
-      end
-
-      def create_initializer
-        path = "config/initializers/refinery_relay.rb"
-        return say_status(:skip, "#{path} already exists (host configuration preserved)") if destination_file?(path)
-
-        template "initializer.rb", path
       end
 
       def install_routes
@@ -62,13 +45,12 @@ module RefineryRelay
         content = destination_content(path)
         availability_installed = route_installed?(content, "get", AVAILABILITY_ROUTE)
         chat_installed = route_installed?(content, "post", CHAT_ROUTE)
-        cable_installed = cable_mount_installed?(content)
-        if availability_installed && chat_installed && cable_installed
+        if availability_installed && chat_installed
           say_status :identical, path
           return
         end
 
-        routes = [ "# Niimble Relay chat routes use direct host routes for Refinery routing-filter compatibility." ]
+        routes = [ "# Niimble Relay API routes use direct host routes for Refinery routing-filter compatibility." ]
         unless availability_installed
           routes << <<~RUBY.chomp
             get "#{AVAILABILITY_ROUTE}",
@@ -81,85 +63,39 @@ module RefineryRelay
                  to: "refinery_relay/api/relay/chats#create"
           RUBY
         end
-        routes << CABLE_MOUNT unless cable_installed
-
         route routes.join("\n")
-      end
-
-      def install_javascript_asset
-        path = first_existing(JAVASCRIPT_MANIFESTS)
-        unless path
-          say_status :warning, "No Sprockets JavaScript manifest found; add `#{JAVASCRIPT_DIRECTIVE}` manually"
-          return
-        end
-
-        install_javascript_directive(path)
-      end
-
-      def install_stylesheet_asset
-        path = first_existing(STYLESHEET_MANIFESTS)
-        unless path
-          say_status :warning, "No Sprockets stylesheet manifest found; add `#{STYLESHEET_DIRECTIVE}` manually"
-          return
-        end
-
-        install_stylesheet_directive(path)
-      end
-
-      def install_site_settings_migration
-        return if Dir.glob(destination_path("db/migrate/*_create_refinery_relay_site_settings.rb")).any?
-
-        timestamp = Time.now.utc.strftime("%Y%m%d%H%M%S")
-        copy_file "create_refinery_relay_site_settings.rb",
-                  "db/migrate/#{timestamp}_create_refinery_relay_site_settings.rb"
-      end
-
-      def install_pod_settings_migration
-        return if Dir.glob(destination_path("db/migrate/*_create_refinery_relay_pod_settings.rb")).any?
-
-        timestamp = (Time.now.utc + 1).strftime("%Y%m%d%H%M%S")
-        copy_file "create_refinery_relay_pod_settings.rb",
-                  "db/migrate/#{timestamp}_create_refinery_relay_pod_settings.rb"
-      end
-
-      def install_footer_logo_settings_migration
-        return if Dir.glob(destination_path("db/migrate/*_add_footer_logo_settings_to_refinery_relay_pod_settings.rb")).any?
-
-        timestamp = (Time.now.utc + 2).strftime("%Y%m%d%H%M%S")
-        copy_file "add_footer_logo_settings_to_refinery_relay_pod_settings.rb",
-                  "db/migrate/#{timestamp}_add_footer_logo_settings_to_refinery_relay_pod_settings.rb"
-      end
-
-      def install_terms_link_migration
-        return if Dir.glob(destination_path("db/migrate/*_add_terms_link_to_refinery_relay_pod_settings.rb")).any?
-
-        timestamp = (Time.now.utc + 3).strftime("%Y%m%d%H%M%S")
-        copy_file "add_terms_link_to_refinery_relay_pod_settings.rb",
-                  "db/migrate/#{timestamp}_add_terms_link_to_refinery_relay_pod_settings.rb"
-      end
-
-      def install_information_image_migration
-        return if Dir.glob(destination_path("db/migrate/*_add_information_image_to_refinery_relay_pod_settings.rb")).any?
-
-        timestamp = (Time.now.utc + 4).strftime("%Y%m%d%H%M%S")
-        copy_file "add_information_image_to_refinery_relay_pod_settings.rb",
-                  "db/migrate/#{timestamp}_add_information_image_to_refinery_relay_pod_settings.rb"
-      end
-
-      def install_assistant_response_color_migration
-        return if Dir.glob(destination_path("db/migrate/*_add_assistant_response_color_to_refinery_relay_site_settings.rb")).any?
-
-        timestamp = (Time.now.utc + 5).strftime("%Y%m%d%H%M%S")
-        copy_file "add_assistant_response_color_to_refinery_relay_site_settings.rb",
-                  "db/migrate/#{timestamp}_add_assistant_response_color_to_refinery_relay_site_settings.rb"
       end
 
       def install_source_tombstones_migration
         return if Dir.glob(destination_path("db/migrate/*_create_refinery_relay_source_tombstones.rb")).any?
 
-        timestamp = (Time.now.utc + 6).strftime("%Y%m%d%H%M%S")
+        timestamp = next_migration_timestamp
         copy_file "create_refinery_relay_source_tombstones.rb",
                   "db/migrate/#{timestamp}_create_refinery_relay_source_tombstones.rb"
+      end
+
+      def install_relay_settings_migration
+        return if Dir.glob(destination_path("db/migrate/*_create_refinery_relay_settings.rb")).any?
+
+        timestamp = next_migration_timestamp
+        copy_file "create_refinery_relay_settings.rb",
+                  "db/migrate/#{timestamp}_create_refinery_relay_settings.rb"
+      end
+
+      def install_widget_markup_migration
+        return if Dir.glob(destination_path("db/migrate/*_add_widget_markup_to_refinery_relay_settings.rb")).any?
+
+        timestamp = next_migration_timestamp
+        copy_file "add_widget_markup_to_refinery_relay_settings.rb",
+                  "db/migrate/#{timestamp}_add_widget_markup_to_refinery_relay_settings.rb"
+      end
+
+      def install_source_types_migration
+        return if Dir.glob(destination_path("db/migrate/*_add_source_types_to_refinery_relay_settings.rb")).any?
+
+        timestamp = next_migration_timestamp
+        copy_file "add_source_types_to_refinery_relay_settings.rb",
+                  "db/migrate/#{timestamp}_add_source_types_to_refinery_relay_settings.rb"
       end
 
       def show_post_install_steps
@@ -167,18 +103,6 @@ module RefineryRelay
       end
 
       private
-
-      JAVASCRIPT_MANIFESTS = %w[
-        app/assets/javascripts/application.js
-        app/assets/javascripts/application.js.erb
-      ].freeze
-
-      STYLESHEET_MANIFESTS = %w[
-        app/assets/stylesheets/application.scss
-        app/assets/stylesheets/application.css
-        app/assets/stylesheets/application.sass
-        app/assets/stylesheets/application.css.scss
-      ].freeze
 
       def destination_path(path)
         File.expand_path(path, destination_root)
@@ -192,19 +116,20 @@ module RefineryRelay
         File.read(destination_path(path))
       end
 
+      def next_migration_timestamp
+        used_timestamps = Dir.glob(destination_path("db/migrate/*.rb")).filter_map do |path|
+          File.basename(path)[/\A(\d{14})_/, 1]
+        end
+        timestamp = Time.now.utc
+        timestamp += 1.second while used_timestamps.include?(timestamp.strftime("%Y%m%d%H%M%S"))
+        timestamp.strftime("%Y%m%d%H%M%S")
+      end
+
       def preflight_failures
         failures = []
         failures << "config/routes.rb is missing" unless destination_file?("config/routes.rb")
         failures << "the refinerycms-pods gem (~> 1.0) is not installed" unless pods_gem_installed?
         failures << "the installed refinerycms-pods gem does not expose Refinery::Pods::Pod::POD_TYPES" unless pods_api_available?
-        failures << "the installed refinerycms-pods gem does not expose Refinery::Pods::Admin::PodsController" unless pods_admin_controller_available?
-        failures << "no Sprockets JavaScript manifest was found (expected #{JAVASCRIPT_MANIFESTS.join(", ")})" unless first_existing(JAVASCRIPT_MANIFESTS)
-        failures << "no Sprockets stylesheet manifest was found (expected #{STYLESHEET_MANIFESTS.join(", ")})" unless first_existing(STYLESHEET_MANIFESTS)
-
-        missing_environment = REQUIRED_ENVIRONMENT_VARIABLES.select { |name| ENV[name].to_s.strip.empty? }
-        unless missing_environment.empty?
-          failures << "required environment variables are missing: #{missing_environment.join(", ")}"
-        end
 
         failures
       end
@@ -219,47 +144,10 @@ module RefineryRelay
         pod_class&.const_defined?(:POD_TYPES, false)
       end
 
-      def pods_admin_controller_available?
-        "Refinery::Pods::Admin::PodsController".safe_constantize.present?
-      end
-
-      def first_existing(paths)
-        paths.find { |path| destination_file?(path) }
-      end
-
       def route_installed?(content, verb, path)
         content.match?(%r{^\s*#{verb}\s+["']#{Regexp.escape(path)}["']})
       end
 
-      def cable_mount_installed?(content)
-        content.match?(/^\s*mount\s+ActionCable\.server\s*=>\s*["']\/cable["']/)
-      end
-
-      def install_javascript_directive(path)
-        content = destination_content(path)
-        return say_status(:identical, path) if content.include?(JAVASCRIPT_DIRECTIVE)
-
-        directive_lines = content.lines.grep(%r{^\s*//=\s*require\b})
-        if directive_lines.any?
-          insert_into_file path, "#{JAVASCRIPT_DIRECTIVE}\n", after: directive_lines.last
-        else
-          prepend_to_file path, "#{JAVASCRIPT_DIRECTIVE}\n"
-        end
-      end
-
-      def install_stylesheet_directive(path)
-        content = destination_content(path)
-        return say_status(:identical, path) if content.include?(STYLESHEET_DIRECTIVE)
-
-        directive_lines = content.lines.grep(/^\s*\*=\s*require\b/)
-        if directive_lines.any?
-          insert_into_file path, " #{STYLESHEET_DIRECTIVE}\n", after: directive_lines.last
-        elsif content.start_with?("/*") && content.include?("*/")
-          insert_into_file path, " #{STYLESHEET_DIRECTIVE}\n", before: "*/"
-        else
-          prepend_to_file path, "/*\n #{STYLESHEET_DIRECTIVE}\n */\n"
-        end
-      end
     end
   end
 end

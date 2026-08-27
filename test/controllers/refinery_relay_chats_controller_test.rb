@@ -7,11 +7,11 @@ class RefineryRelayChatsControllerTest < ActionDispatch::IntegrationTest
   AVAILABILITY_PATH = "/refinery_relay/api/relay/chat/availability"
 
   setup do
-    RefineryRelay.reset_configuration!
+    RefineryRelay::RelaySetting.delete_all
   end
 
   teardown do
-    RefineryRelay.reset_configuration!
+    RefineryRelay::RelaySetting.delete_all
   end
 
   test "proxies a browser chat request to Relay" do
@@ -53,7 +53,7 @@ class RefineryRelayChatsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "keeps only citations from the configured public site" do
-    RefineryRelay.configuration.public_base_url = "https://refinery.example"
+    RefineryRelay::RelaySetting.create!(public_base_url: "https://refinery.example")
     test_case = self
     payload = {
       "answer" => "Read the About page [1].",
@@ -81,7 +81,7 @@ class RefineryRelayChatsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "keeps local loopback citations when the browser uses localhost" do
-    RefineryRelay.configuration.public_base_url = "http://localhost:3004"
+    RefineryRelay::RelaySetting.create!(public_base_url: "http://localhost:3004")
     payload = {
       "answer" => "Read the home page [1].",
       "citations" => [

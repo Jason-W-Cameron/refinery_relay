@@ -1,38 +1,23 @@
 # RefineryRelay
 
-A Rails engine that adds the Niimble Relay LLM Chat Pod to Refinery CMS applications.
+A Rails engine that connects Refinery CMS content to Niimble Relay.
 
-## Requirements
-
-RefineryRelay supports Rails 8.1+ and Refinery CMS 4.1+. It requires the
-`refinerycms-pods` 1.x extension, Sprockets JavaScript and stylesheet manifests,
-Redis, and the `RELAY_CHAT_BASE_URL`, `RELAY_CHAT_TOKEN`, `RELAY_PUBLIC_BASE_URL`,
-and `REDIS_URL` environment variables. The installer checks these requirements
-before it changes the host application.
+This gem does not ship a visual implementation. It registers the `LLM Chat`
+(`llm_chat`) Pod type and renders only a `<relay-llm-widget>` mount element.
+Relay owns all browser UI, branding, styles, images, and interactive chat
+behavior.
 
 ## Installation
 
-Add the gem to the host application's Gemfile and run `bundle install`:
-
-```ruby
-gem "refinery_relay"
-```
-
-Run the installer from the consuming Refinery application:
+Add the gem to a Refinery application and run:
 
 ```bash
 bin/rails generate refinery_relay:install
 ```
 
-The generator creates `config/initializers/refinery_relay.rb`, adds the direct host routes below,
-and registers the engine JavaScript and CSS in the host's Sprockets manifests. It is safe to run
-more than once and preserves an existing initializer.
-
-The generated routes are:
-
-```ruby
-mount ActionCable.server => "/cable"
-```
+The installer configures the backend routes and adds the Relay settings and
+source-tombstone migrations. It does not create an initializer or alter
+JavaScript, stylesheet, or Action Cable manifests.
 
 ```ruby
 get "/refinery_relay/api/relay/chat/availability",
@@ -41,103 +26,44 @@ post "/refinery_relay/api/relay/chat",
      to: "refinery_relay/api/relay/chats#create"
 ```
 
-The installer loads the browser controller globally so Swup and other partial-page navigation
-libraries can enter a page containing the Pod:
+Run `bin/rails db:migrate`, then open **Relay Settings** in the Refinery admin
+sidebar. This single page stores only the Relay chat URL/token, selected source
+types, the generated feed bearer token, and LLM widget markup in
+`refinery_relay_settings`. No Relay environment variables or host initializer
+are required. The optional API proxy remains available for Relay integrations;
+it renders no HTML or visual assets.
 
-```javascript
-//= require refinery_relay/chat
-```
+The **Sources to ingest** checkboxes control which Refinery content families
+are exported by the direct feed: Pages, Blog posts, Works, Expertises, FAQs,
+Industries, Local businesses, and Brands. Pages are enabled by default;
+optional sources are skipped when their Refinery extension is not installed.
 
-The installer also adds the engine stylesheet to the host stylesheet manifest:
+## Pod compatibility
 
-```css
-/*
- *= require refinery_relay/application
- */
-```
-
-The stylesheet is scoped beneath `.refinery-relay-chat`. A host can override the theme without
-copying engine CSS by setting the `--refinery-relay-*` custom properties on that root class.
-The chat typography inherits the consuming website's computed font, including its configured
-font stack and loaded webfont.
-The Pod partial does not output separate asset tags, preventing duplicate JavaScript, Action Cable
-subscriptions, or stylesheet requests.
-
-Set `RELAY_CHAT_BASE_URL`, `RELAY_CHAT_TOKEN`, `RELAY_CHAT_TENANT_KEY`,
-`RELAY_PUBLIC_BASE_URL`, and `REDIS_URL` in the host environment. The generated initializer is
-available for optional application-specific overrides:
-
-```ruby
-RefineryRelay.configure do |config|
-  config.chat_tenant_key = "my-refinery-site"
-  config.chat_prompt_placeholder = "How many Comrades Marathons must I run to get a Green Number?"
-end
-```
-
-The prompt placeholder is also available through `RELAY_CHAT_PROMPT_PLACEHOLDER`.
-The default footer logo and its destination can be overridden with
-`RELAY_CHAT_FOOTER_LOGO_URL` and `RELAY_CHAT_FOOTER_LOGO_LINK`.
-
-The engine registers the `LLM Chat` Pod type. In Refinery admin, the Pod title is the chat
-heading and Pod Item titles are suggested questions. The LLM Chat Pod does not use the generic
-subtitle or body fields.
-
-The `Chat content` section on an LLM Chat Pod controls that pod's prompt placeholder,
-right-hand information card, footer logo image URL, and footer logo link. These values are
-stored per pod; blank values fall back to the initializer defaults.
-
-The chat theme can be configured once per Refinery site in the `Styling` section beneath
-Suggested Questions when editing an `LLM Chat` Pod. The five available values are accent colour,
-background colour, surface colour, text colour, and assistant response colour. Supporting colours and contrast-safe button
-text are derived automatically and shared by all LLM Chat Pods. The generated initializer remains
-the fallback when no admin values have been saved.
+The gem continues to register the `LLM Chat` Pod type with
+`refinerycms-pods`. Existing and new `llm_chat` pod records remain selectable.
+Use **Relay Settings → LLM widget** in Refinery admin to enter the Relay widget
+HTML/script. That trusted markup is rendered inside `<relay-llm-widget>` exactly
+where an LLM Chat Pod is placed.
 
 ## Direct source feed
 
-The gem converts published Refinery Pages and their associated Pods directly into Relay's
-paginated JSON document format. It does not require or call an `/nlweb/rss` endpoint. It includes
-structured page/Pod text plus linked Refinery images and resources as Relay citation assets. A
-page delete or unpublish is retained as an explicit feed tombstone, so Relay removes it instead of
-mistaking an absent record for unchanged content. Configure a private source token:
+The gem converts the selected Refinery content families into Relay's paginated
+JSON document format. Pages include their associated Pod text. The feed is
+text-only: it does not export images, thumbnails, files, themes, or other
+visual assets.
+
+Relay can fetch:
 
 ```text
-RELAY_SOURCE_TOKEN=replace-with-a-private-token
+GET /refinery_relay/api/relay/documents
 ```
 
-The gem automatically provides `GET /refinery_relay/api/relay/documents`. Configure Relay's HTTP
-feed source with that URL and the same bearer token. Each snapshot page represents one published
-Refinery Page with its Page Parts and associated Pod text. Documents use stable identifiers, are
-paginated for Relay, and contain the public Page URL for citations. Chat responses also apply the
-same-origin check before rendering a citation link in the browser.
-
-To request an immediate re-read after content changes, also configure Relay's source-sync
-credential and the source UUID shown in the Relay console:
-
-```text
-RELAY_SYNC_TOKEN=sync-write-credential
-RELAY_SOURCE_ID=relay-source-uuid
-```
-
-`RELAY_SYNC_BASE_URL` is optional and defaults to `RELAY_CHAT_BASE_URL`. The gem queues a
-`POST /api/v1/sources/:source_id/sync` only after a Page, Page Part, Pod, Image, or Resource
-transaction commits. Relay's normal polling remains the safety net if the source application or
-Relay is temporarily unavailable.
-
-## Development
-
-Run the Ruby and browser test suites:
-
-```bash
-bundle exec rails test
-npm run test:js
-bin/rails test:system
-```
-
-The system suite requires Redis plus Google Chrome and a matching ChromeDriver. Together, these
-suites install the engine into a disposable host, render a persisted Refinery Pod, and exercise the
-Relay HTTP boundary, citations, Action Cable availability broadcasts, and the Swup replacement
-lifecycle.
+In **Relay Settings**, generate a bearer token and copy it into Relay's HTTP
+feed source configuration. Copy the displayed feed endpoint into that source's
+endpoint field. Relay polls the endpoint for content changes, so no sync URL,
+source ID, Redis URL, tenant key, or timeout setting is needed.
 
 ## License
 
-The gem is available as open source under the terms of the [MIT License](https://opensource.org/licenses/MIT).
+The gem is available as open source under the terms of the MIT License.

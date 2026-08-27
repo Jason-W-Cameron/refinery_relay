@@ -6,46 +6,29 @@ module RefineryRelay
       app.routes.prepend do
         get "/refinery_relay/api/relay/documents",
             to: "refinery_relay/api/relay/documents#index"
-        get "/refinery_relay/admin/settings",
-            to: "refinery_relay/admin/settings#show"
+
+        scope "/#{::Refinery::Core.backend_route}" do
+          get "relay_settings", to: "refinery_relay/admin/relay_settings#edit", as: :refinery_relay_settings
+          patch "relay_settings", to: "refinery_relay/admin/relay_settings#update"
+          post "relay_settings/generate_bearer_token", to: "refinery_relay/admin/relay_settings#generate_bearer_token",
+               as: :refinery_relay_generate_bearer_token
+        end
       end
     end
 
-    initializer "refinery_relay.assets" do |app|
-      next unless app.config.respond_to?(:assets)
-
-      app.config.assets.precompile += %w[
-        refinery_relay/admin.js
-        refinery_relay/admin.css
-        refinery_relay/chat.js
-        refinery_relay/application.css
-        refinery_relay/niimble-logo-light-tp.png
-      ]
-    end
-
-    config.after_initialize do
-      next unless defined?(::Refinery::Core)
-
-      unless ::Refinery::Core.javascripts.include?("refinery_relay/admin")
-        ::Refinery::Core.config.register_javascript("refinery_relay/admin")
-      end
-      unless ::Refinery::Core.config.stylesheets.any? { |stylesheet| stylesheet.path == "refinery_relay/admin" }
-        ::Refinery::Core.config.register_stylesheet("refinery_relay/admin")
+    initializer "refinery_relay.register_settings_plugin" do
+      ::Refinery::Plugin.register do |plugin|
+        plugin.name = "relay_settings"
+        plugin.pathname = root
+        plugin.always_allow_access = true
+        plugin.menu_match = %r{\Arefinery_relay/relay_settings\z}
+        plugin.url = proc { Rails.application.routes.url_helpers.refinery_relay_settings_path }
       end
     end
 
     config.to_prepare do
       RefineryRelay::PodRegistration.install!
       RefineryRelay::Engine.install_source_sync_callbacks!
-
-      # `to_prepare` may run before classic Rails autoloading has loaded the
-      # Pods admin controller. Resolve it by name so registration works on a
-      # cold boot as well as after a development reload.
-      if (controller = "Refinery::Pods::Admin::PodsController".safe_constantize)
-        unless controller.ancestors.include?(RefineryRelay::PodsAdminController)
-          controller.prepend(RefineryRelay::PodsAdminController)
-        end
-      end
     end
 
     def self.install_source_sync_callbacks!
@@ -53,12 +36,23 @@ module RefineryRelay
 
       [
         "Refinery::PagePart",
-        "Refinery::Pods::Pod",
-        "Refinery::Image",
-        "Refinery::Resource"
+        "Refinery::Pods::Pod"
       ].each do |name|
         model = name.safe_constantize
         install_callback(model, RefineryRelay::SourceSyncCallbacks) if model
+      end
+
+      [
+        "Refinery::Blog::Post",
+        "Refinery::Works::Work",
+        "Refinery::Expertises::Expertise",
+        "Refinery::Faqs::Faq",
+        "Refinery::Industries::Industry",
+        "Refinery::LocalBusinesses::LocalBusiness",
+        "Refinery::Brands::Brand"
+      ].each do |name|
+        model = name.safe_constantize
+        install_callback(model, RefineryRelay::SourceTombstoneCallbacks) if model
       end
     end
 

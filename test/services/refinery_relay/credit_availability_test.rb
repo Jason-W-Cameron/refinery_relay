@@ -27,31 +27,15 @@ class RefineryRelayCreditAvailabilityTest < ActiveSupport::TestCase
     end
   end
 
-  class FakeBroadcaster
-    attr_reader :events
-
-    def initialize
-      @events = []
-    end
-
-    def broadcast(stream, payload)
-      events << [ stream, payload ]
-    end
-  end
-
   setup do
     @redis = FakeRedis.new
-    @broadcaster = FakeBroadcaster.new
-    RefineryRelay.configure do |config|
-      config.chat_tenant_key = "refinery-site"
-      config.redis = @redis
-      config.broadcaster = @broadcaster
-    end
-    @availability = RefineryRelay::CreditAvailability.new
+    RefineryRelay::RelaySetting.delete_all
+    RefineryRelay::RelaySetting.create!(chat_tenant_key: "refinery-site")
+    @availability = RefineryRelay::CreditAvailability.new(redis: @redis)
   end
 
   teardown do
-    RefineryRelay.reset_configuration!
+    RefineryRelay::RelaySetting.delete_all
   end
 
   test "is available until a future reset time is recorded" do
@@ -60,12 +44,9 @@ class RefineryRelayCreditAvailabilityTest < ActiveSupport::TestCase
     reset_at = 2.hours.from_now.iso8601
     assert @availability.mark_unavailable!(resets_at: reset_at)
     assert_not @availability.available?
-    assert_equal [
-      [ RefineryRelay::CreditAvailability.stream_name, { type: "chat_unavailable" } ]
-    ], @broadcaster.events
   end
 
-  test "keeps the latest reset time and broadcasts only when state changes" do
+  test "keeps the latest reset time when state changes" do
     earlier = 1.hour.from_now.iso8601
     later = 2.hours.from_now.iso8601
 
@@ -74,7 +55,6 @@ class RefineryRelayCreditAvailabilityTest < ActiveSupport::TestCase
     assert_not @availability.mark_unavailable!(resets_at: earlier)
 
     assert_equal later, @redis.get("relay_chat_unavailable_until:refinery-site")
-    assert_equal 2, @broadcaster.events.length
   end
 
   test "clears the unavailable circuit" do

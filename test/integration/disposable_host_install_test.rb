@@ -15,9 +15,7 @@ class RefineryRelayDisposableHostInstallTest < ActiveSupport::TestCase
       FileUtils.cp_r("#{dummy_root}/.", host_root)
       prepare_uninstalled_host(host_root)
 
-      with_relay_environment do
-        RefineryRelay::Generators::InstallGenerator.start([], destination_root: host_root)
-      end
+      RefineryRelay::Generators::InstallGenerator.start([], destination_root: host_root)
 
       assert_generated_host_files(host_root)
       assert_host_boots(host_root)
@@ -32,16 +30,6 @@ class RefineryRelayDisposableHostInstallTest < ActiveSupport::TestCase
 
   def prepare_uninstalled_host(host_root)
     write_host_file(host_root, "config/routes.rb", "Rails.application.routes.draw do\nend\n")
-    write_host_file(
-      host_root,
-      "app/assets/javascripts/application.js",
-      "//= require_self\n\nwindow.disposableHostBooted = true;\n"
-    )
-    write_host_file(
-      host_root,
-      "app/assets/stylesheets/application.css",
-      "/*\n *= require_self\n */\n"
-    )
   end
 
   def write_host_file(host_root, path, content)
@@ -50,34 +38,13 @@ class RefineryRelayDisposableHostInstallTest < ActiveSupport::TestCase
     File.write(absolute_path, content)
   end
 
-  def with_relay_environment
-    values = {
-      "REDIS_URL" => "redis://127.0.0.1:6379/15",
-      "RELAY_CHAT_BASE_URL" => "https://relay.example",
-      "RELAY_CHAT_TOKEN" => "relay-test-token",
-      "RELAY_PUBLIC_BASE_URL" => "https://refinery.example"
-    }
-    original_values = values.keys.to_h { |key| [ key, ENV[key] ] }
-    ENV.update(values)
-    yield
-  ensure
-    original_values.each do |key, value|
-      value ? ENV[key] = value : ENV.delete(key)
-    end
-  end
-
   def assert_generated_host_files(host_root)
-    initializer = File.read(File.join(host_root, "config/initializers/refinery_relay.rb"))
     routes = File.read(File.join(host_root, "config/routes.rb"))
-    javascript = File.read(File.join(host_root, "app/assets/javascripts/application.js"))
-    stylesheet = File.read(File.join(host_root, "app/assets/stylesheets/application.css"))
-
-    assert_includes initializer, 'require "redis"'
     assert_includes routes, 'get "/refinery_relay/api/relay/chat/availability"'
     assert_includes routes, 'post "/refinery_relay/api/relay/chat"'
-    assert_includes routes, 'mount ActionCable.server => "/cable"'
-    assert_includes javascript, "//= require refinery_relay/chat"
-    assert_includes stylesheet, "*= require refinery_relay/application"
+    assert_not_includes routes, "ActionCable"
+    assert_empty Dir.glob(File.join(host_root, "config/initializers/refinery_relay.rb"))
+    assert Dir.glob(File.join(host_root, "db/migrate/*_create_refinery_relay_settings.rb")).any?
   end
 
   def assert_host_boots(host_root)
@@ -90,20 +57,19 @@ class RefineryRelayDisposableHostInstallTest < ActiveSupport::TestCase
         "/refinery_relay/api/relay/chat",
         method: :post
       )
+      settings = Rails.application.routes.recognize_path(
+        "/refinery/relay_settings",
+        method: :get
+      )
       raise "availability route missing" unless availability[:controller] == "refinery_relay/api/relay/chats"
       raise "chat route missing" unless chat[:controller] == "refinery_relay/api/relay/chats"
-      raise "Redis initializer missing" unless RefineryRelay.configuration.redis.is_a?(Redis)
-      raise "chat JavaScript missing" unless Rails.application.assets.find_asset("refinery_relay/chat.js")
-      raise "chat stylesheet missing" unless Rails.application.assets.find_asset("refinery_relay/application.css")
+      raise "settings route missing" unless settings[:controller] == "refinery_relay/admin/relay_settings"
+      raise "Relay settings plugin missing" unless Refinery::Plugins.registered.names.include?("relay_settings")
       puts "disposable host boot: OK"
     RUBY
     environment = {
       "BUNDLE_GEMFILE" => RefineryRelay::Engine.root.join("Gemfile").to_s,
-      "RAILS_ENV" => "test",
-      "REDIS_URL" => "redis://127.0.0.1:6379/15",
-      "RELAY_CHAT_BASE_URL" => "https://relay.example",
-      "RELAY_CHAT_TOKEN" => "relay-test-token",
-      "RELAY_PUBLIC_BASE_URL" => "https://refinery.example"
+      "RAILS_ENV" => "test"
     }
     stdout, stderr, status = Open3.capture3(
       environment,

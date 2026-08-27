@@ -6,14 +6,15 @@ class RefineryRelayDocumentsControllerTest < ActionDispatch::IntegrationTest
   DOCUMENTS_PATH = "/refinery_relay/api/relay/documents"
 
   setup do
-    RefineryRelay.configure do |config|
-      config.source_token = "source-token"
-      config.public_base_url = "https://refinery.example/"
-    end
+    RefineryRelay::RelaySetting.delete_all
+    RefineryRelay::RelaySetting.create!(
+      source_token: "source-token",
+      public_base_url: "https://refinery.example/"
+    )
   end
 
   teardown do
-    RefineryRelay.reset_configuration!
+    RefineryRelay::RelaySetting.delete_all
   end
 
   test "the gem automatically provides an authenticated direct documents endpoint" do
@@ -42,7 +43,7 @@ class RefineryRelayDocumentsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "stays unavailable until the source token is configured" do
-    RefineryRelay.configuration.source_token = ""
+    RefineryRelay::RelaySetting.current.update!(source_token: "")
 
     get DOCUMENTS_PATH, headers: { "Authorization" => "Bearer source-token" }
 
