@@ -14,7 +14,7 @@ class RefineryRelayLlmChatPodTest < ActionView::TestCase
   end
 
   test "renders only the widget mount element when no widget markup is configured" do
-    render partial: "refinery/pods/shared/llm_chat_pod", locals: { pod: Pod.new(42, "llm_chat") }
+    render partial: "refinery/pods/shared/relay_chat_pod", locals: { pod: Pod.new(42, "relay_chat") }
 
     assert_select "relay-llm-widget", count: 1
     assert_equal "<relay-llm-widget></relay-llm-widget>", rendered.strip
@@ -26,7 +26,7 @@ class RefineryRelayLlmChatPodTest < ActionView::TestCase
       widget_markup:
     )
 
-    render partial: "refinery/pods/shared/llm_chat_pod", locals: { pod: Pod.new(42, "llm_chat") }
+    render partial: "refinery/pods/shared/relay_chat_pod", locals: { pod: Pod.new(42, "relay_chat") }
 
     assert_select "script[src='https://relay.example/niimble-relay-widget.js'][defer]", count: 1
     assert_select "relay-llm-widget", count: 1 do
@@ -34,5 +34,11 @@ class RefineryRelayLlmChatPodTest < ActionView::TestCase
       assert_select "niimble-relay-chat[relay-url='https://relay.example'][widget-key='nrw_test']", count: 1
     end
     assert_not_includes rendered, '<script src="https://relay.example/niimble-relay-widget.js"></script>'
+  end
+
+  test "continues rendering legacy llm_chat pods" do
+    render partial: "refinery/pods/shared/llm_chat_pod", locals: { pod: Pod.new(42, "llm_chat") }
+
+    assert_select "relay-llm-widget", count: 1
   end
 end

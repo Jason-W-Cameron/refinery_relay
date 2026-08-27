@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
 module RefineryRelay
-  # Defines the retained Refinery pod identity without supplying any UI.
+    # Defines the retained Refinery pod identity without supplying any UI.
   module PodContract
-    POD_TYPE = "llm_chat"
+    POD_TYPE = "relay_chat"
     module_function
 
     def chat_pod?(pod)

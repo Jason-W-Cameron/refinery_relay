@@ -6,7 +6,8 @@ class RefineryRelayPodRenderingTest < ActiveSupport::TestCase
   test "adds Relay Chat to an explicit shared-pods list" do
     view = build_view
 
-    assert_equal [ "content", "llm_chat" ], view.set_pod_types(pod_types: [ "content" ])
+    assert_equal [ "content", "relay_chat" ],
+                 view.set_pod_types(pod_types: [ "content" ])
   end
 
   test "does not add Relay Chat again to later shared-pods calls" do
@@ -20,9 +21,16 @@ class RefineryRelayPodRenderingTest < ActiveSupport::TestCase
   test "normalizes registered select options for frontend filtering" do
     view = build_view
 
-    assert_equal [ "content", "llm_chat" ],
+    assert_equal [ "content", "relay_chat" ],
                  view.set_pod_types(pod_types: [ [ "Basic Text Editor", "content" ],
-                                                  [ "Relay Chat", "llm_chat" ] ])
+                                                  [ "Relay Chat", "relay_chat" ] ])
+  end
+
+  test "adds the canonical key to a legacy explicit list" do
+    view = build_view
+
+    assert_equal [ "llm_chat", "relay_chat" ],
+                 view.set_pod_types(pod_types: [ "llm_chat" ])
   end
 
   private

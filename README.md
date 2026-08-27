@@ -3,7 +3,7 @@
 A Rails engine that connects Refinery CMS content to Niimble Relay.
 
 This gem does not ship a visual implementation. It registers the `Relay Chat`
-(`llm_chat`) Pod type and renders only a `<relay-llm-widget>` mount element.
+(`relay_chat`) Pod type and renders only a `<relay-llm-widget>` mount element.
 Relay owns all browser UI, branding, styles, images, and interactive chat
 behavior.
 
@@ -34,8 +34,9 @@ optional sources are skipped when their Refinery extension is not installed.
 ## Pod compatibility
 
 The gem continues to register the `Relay Chat` Pod type with
-`refinerycms-pods`. Existing and new `llm_chat` pod records remain selectable.
-The engine also adds `llm_chat` automatically when a host layout passes an
+`refinerycms-pods`. New pods use the canonical `relay_chat` key. Run `bin/rails
+db:migrate` once to convert existing `llm_chat` records. The engine also adds
+`relay_chat` automatically when a host layout passes an
 explicit `pod_types` list to Refinery's shared pod renderer, so host layouts do
 not need a Relay-specific edit. It is rendered once per view context to avoid
 duplicates across multiple pod regions.
