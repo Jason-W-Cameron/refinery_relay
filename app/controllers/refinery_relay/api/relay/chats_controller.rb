@@ -42,7 +42,7 @@ module RefineryRelay
         end
 
         # Keep citation positions stable so answer markers such as [1] still
-        # refer to the same citation after unsafe or off-site URLs are removed.
+        # refer to the same citation after unsafe URLs are removed.
         def filter_source_citations(payload)
           return payload unless payload.is_a?(Hash) && payload.key?("citations")
 
@@ -55,9 +55,7 @@ module RefineryRelay
         end
 
         def source_url_policy
-          @source_url_policy ||= RefineryRelay::SourceUrlPolicy.new(
-            base_url: RefineryRelay.configuration.public_base_url.presence || request.base_url
-          )
+          @source_url_policy ||= RefineryRelay::SourceUrlPolicy.new
         end
 
         def credit_limit_exhausted?(result)

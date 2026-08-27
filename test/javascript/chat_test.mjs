@@ -84,19 +84,33 @@ test("builds citation view models with safe image and PDF metadata", () => {
   assert.equal(pdf.detail, "refinery.example · pdf · 24 pages")
 })
 
-test("rejects unsafe source protocols and only permits HTTP when configured", () => {
+test("rejects unsafe or malformed source URLs and permits absolute HTTP(S) links", () => {
   const production = citationController()
   const development = citationController({ allowInsecureAssets: true })
 
-  assert.equal(ChatController.prototype.safeSourceUrl.call(production, "javascript:alert(1)"), null)
-  assert.equal(ChatController.prototype.safeSourceUrl.call(production, "http://cdn.example/image.jpg"), null)
+  ;[
+    "javascript:alert(1)",
+    "data:text/html,unsafe",
+    "file:///etc/passwd",
+    "not a URL",
+    "/relative-url",
+    "",
+    "   ",
+    null
+  ].forEach(function(value) {
+    assert.equal(ChatController.prototype.safeSourceUrl.call(production, value), null)
+  })
+  assert.equal(
+    ChatController.prototype.safeSourceUrl.call(production, "http://cdn.example/article"),
+    "http://cdn.example/article"
+  )
   assert.equal(
     ChatController.prototype.safeAssetUrl.call(development, "http://cdn.example/image.jpg"),
     "http://cdn.example/image.jpg"
   )
 })
 
-test("allows source links only on the configured public site", () => {
+test("allows source links from any host", () => {
   const controller = citationController()
 
   assert.equal(
@@ -105,7 +119,7 @@ test("allows source links only on the configured public site", () => {
   )
   assert.equal(
     ChatController.prototype.safeSourceUrl.call(controller, "https://other.example/article"),
-    null
+    "https://other.example/article"
   )
 })
 

@@ -536,40 +536,15 @@
   };
 
   ChatController.prototype.safeSourceUrl = function(value) {
-    var url = this.safeAssetUrl(value);
-    if (!url) return null;
-
-    try {
-      var sourceOrigin = new window.URL(this.sourceOrigin || window.location.origin);
-      var sourceUrl = new window.URL(url);
-      var sourcePort = sourceOrigin.port || (sourceOrigin.protocol === "https:" ? "443" : "80");
-      var urlPort = sourceUrl.port || (sourceUrl.protocol === "https:" ? "443" : "80");
-      if (!this.sameSourceHost(sourceUrl.hostname, sourceOrigin.hostname)) return null;
-      if (urlPort !== sourcePort) return null;
-      return url;
-    } catch (error) {
-      return null;
-    }
+    return this.safeAssetUrl(value, true);
   };
 
-  ChatController.prototype.sameSourceHost = function(left, right) {
-    var normalize = function(host) {
-      return String(host || "").toLowerCase().replace(/^www\./, "").replace(/^\[/, "").replace(/\]$/, "");
-    };
-    var leftHost = normalize(left);
-    var rightHost = normalize(right);
-    var loopbackHosts = ["localhost", "127.0.0.1", "::1"];
-
-    return leftHost === rightHost ||
-      (loopbackHosts.indexOf(leftHost) !== -1 && loopbackHosts.indexOf(rightHost) !== -1);
-  };
-
-  ChatController.prototype.safeAssetUrl = function(value) {
+  ChatController.prototype.safeAssetUrl = function(value, allowInsecureHttp) {
     if (typeof value !== "string" || !value.trim()) return null;
 
     try {
       var url = new window.URL(value);
-      var allowsHttp = this.allowInsecureAssets || window.location.protocol === "http:";
+      var allowsHttp = allowInsecureHttp || this.allowInsecureAssets || window.location.protocol === "http:";
       return url.protocol === "https:" || (allowsHttp && url.protocol === "http:") ? url.toString() : null;
     } catch (error) {
       return null;
