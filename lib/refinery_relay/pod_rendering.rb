@@ -1,0 +1,47 @@
+# frozen_string_literal: true
+
+module RefineryRelay
+  # Makes the Relay pod available to Refinery's shared frontend pod renderer.
+  # Host layouts may still provide an explicit pod_types list; in that case the
+  # Relay pod is added to the first shared-pods call and rendered only once per
+  # view context.
+  module PodRendering
+    RENDERED_IVAR = :@_refinery_relay_chat_pod_rendered
+
+    module HelperMethods
+      def set_pod_types(locals)
+        pod_types = super
+        RefineryRelay::PodRendering.pod_types_for(pod_types, self, locals)
+      end
+    end
+
+    module_function
+
+    def install!(helper: "PodsHelper".safe_constantize)
+      return false unless helper
+      return false if helper.ancestors.include?(HelperMethods)
+
+      helper.prepend(HelperMethods)
+      true
+    end
+
+    def pod_types_for(pod_types, view_context, locals)
+      values = Array(pod_types).map { |entry| pod_type_value(entry) }
+
+      if values.include?(PodContract::POD_TYPE)
+        view_context.instance_variable_set(RENDERED_IVAR, true)
+      elsif locals.respond_to?(:key?) && locals.key?(:pod_types) &&
+            !view_context.instance_variable_get(RENDERED_IVAR)
+        values << PodContract::POD_TYPE
+        view_context.instance_variable_set(RENDERED_IVAR, true)
+      end
+
+      values
+    end
+
+    def pod_type_value(entry)
+      entry.is_a?(Array) ? entry[1].to_s : entry.to_s
+    end
+    private_class_method :pod_type_value
+  end
+end

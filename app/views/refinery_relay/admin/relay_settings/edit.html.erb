@@ -538,7 +538,7 @@
               </span>
               <div>
                 <h3>Direct Relay widget</h3>
-                <p>Paste the public widget embed code copied from Relay’s Chat widget section.</p>
+                <p>Paste the public widget mount markup copied from Relay’s Chat widget section.</p>
               </div>
             </div>
             <div class="rr-card-body">
@@ -548,8 +548,8 @@
                                    class: "rr-textarea",
                                    rows: 10,
                                    spellcheck: false,
-                                   placeholder: '<script src="https://relay.example/niimble-relay-widget.js" defer></script>' %>
-                <p class="rr-hint">The public widget communicates directly with Relay. Configure the site origin in Relay and never paste a private chat token here.</p>
+                                   placeholder: '<niimble-relay-chat relay-url="https://relay.example" widget-key="nrw_public-widget-key"></niimble-relay-chat>' %>
+                <p class="rr-hint">The gem loads the Relay widget script from the markup’s <code>relay-url</code>. Configure the site origin in Relay and never paste a private chat token here.</p>
               </div>
             </div>
           </section>

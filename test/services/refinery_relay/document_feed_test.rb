@@ -8,6 +8,7 @@ class RefineryRelayDocumentFeedTest < ActiveSupport::TestCase
                        :image, :mobile_image, :image2, :image3, :background_image, :file, :file2)
   FakePage = Struct.new(:id, :title, :slug, :url, :parts, :pods, :updated_at)
   FakeFaq = Struct.new(:id, :question, :answer, :updated_at, :slug)
+  FakeBlogPost = Struct.new(:id, :title, :short_description, :custom_teaser, :body, :updated_at, :slug, :custom_url)
   FakeBinary = Struct.new(:url, :data)
   FakeImage = Struct.new(:id, :title, :alt, :image_mime_type, :updated_at, :url, :image) do
     def thumbnail(geometry:)
@@ -157,5 +158,29 @@ class RefineryRelayDocumentFeedTest < ActiveSupport::TestCase
     assert_equal "faq", document.fetch("content_type")
     assert_equal "https://sit.example/faqs/4", document.fetch("url")
     assert_includes document.fetch("content"), "Relay indexes the selected Refinery content."
+  end
+
+  test "uses the Refinery route helper for source URLs" do
+    now = Time.utc(2026, 8, 25, 12, 0, 0)
+    post = FakeBlogPost.new(
+      8, "Why marketing spend matters", nil, nil, "The article body.", now,
+      "why-your-marketing-spend-matters-more-than-you-think",
+      "Why-Your-Marketing-Spend-Matters-More-Than-You-Think"
+    )
+    route_helpers = Object.new
+    route_helpers.define_singleton_method(:blog_post_path) { |record| "/blog/posts/#{record.slug}" }
+
+    stub_class_method(Refinery, :route_for_model, ->(*) { "blog_post_path" }) do
+      document = TestFeed.new(
+        pages: [],
+        source_records: { "blog_posts" => [ post ] },
+        source_types: [ "blog_posts" ],
+        cursor: nil,
+        public_base_url: "http://localhost:3000",
+        route_helpers: route_helpers
+      ).call.fetch("documents").first
+
+      assert_equal "http://localhost:3000/blog/posts/why-your-marketing-spend-matters-more-than-you-think", document.fetch("url")
+    end
   end
 end

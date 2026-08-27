@@ -20,20 +20,19 @@ class RefineryRelayLlmChatPodTest < ActionView::TestCase
     assert_equal "<relay-llm-widget></relay-llm-widget>", rendered.strip
   end
 
-  test "renders the trusted widget markup from Relay settings in place of the pod" do
-    widget_markup = '<style>.relay-widget { display: block; }</style><script>window.relayWidgetReady = true;</script><div class="relay-widget" data-relay-widget="chat">Ready</div>'
+  test "loads Relay's script and renders the mount markup without pasted scripts" do
+    widget_markup = '<script src="https://relay.example/niimble-relay-widget.js"></script><niimble-relay-chat relay-url="https://relay.example" widget-key="nrw_test"></niimble-relay-chat>'
     RefineryRelay::RelaySetting.create!(
       widget_markup:
     )
 
     render partial: "refinery/pods/shared/llm_chat_pod", locals: { pod: Pod.new(42, "llm_chat") }
 
+    assert_select "script[src='https://relay.example/niimble-relay-widget.js'][defer]", count: 1
     assert_select "relay-llm-widget", count: 1 do
-      assert_select "style", text: ".relay-widget { display: block; }"
-      assert_select "script", text: "window.relayWidgetReady = true;"
-      assert_select "div.relay-widget[data-relay-widget='chat']", text: "Ready"
+      assert_select "script", count: 0
+      assert_select "niimble-relay-chat[relay-url='https://relay.example'][widget-key='nrw_test']", count: 1
     end
-    assert_includes rendered, widget_markup
-    assert_not_includes rendered, "&lt;script&gt;"
+    assert_not_includes rendered, '<script src="https://relay.example/niimble-relay-widget.js"></script>'
   end
 end

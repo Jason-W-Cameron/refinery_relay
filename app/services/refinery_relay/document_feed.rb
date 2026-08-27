@@ -32,7 +32,7 @@ module RefineryRelay
       "pages" => { model: "Refinery::Page" },
       "blog_posts" => {
         model: "Refinery::Blog::Post", title: :title,
-        fields: %i[short_description custom_teaser body], path: "/blog"
+        fields: %i[short_description custom_teaser body], path: "/blog/posts"
       },
       "works" => {
         model: "Refinery::Works::Work", title: :title,
@@ -71,11 +71,12 @@ module RefineryRelay
       new(cursor: cursor, public_base_url: public_base_url).call
     end
 
-    def initialize(cursor:, public_base_url:, page_size: DEFAULT_PAGE_SIZE, source_types: nil)
+    def initialize(cursor:, public_base_url:, page_size: DEFAULT_PAGE_SIZE, source_types: nil, route_helpers: nil)
       @cursor = decode_cursor(cursor)
       @public_base_url = public_base_url.to_s.sub(%r{/+\z}, "")
       @page_size = [[page_size.to_i, 1].max, MAX_PAGE_SIZE].min
       @source_types = normalize_source_types(source_types || RelaySetting.current.source_types)
+      @route_helpers = route_helpers
     end
 
     def call
@@ -298,16 +299,42 @@ module RefineryRelay
     end
 
     def source_url(record, collection_path)
-      path = if record.respond_to?(:custom_url) && record.custom_url.present?
-        record.custom_url.to_s
-      elsif record.respond_to?(:url) && record.url.present?
-        record.url.to_s
-      else
+      # FriendlyId's custom_url is the record's parameter, not the public
+      # route itself. Resolve the route through Refinery so mounted paths,
+      # extension namespaces, and route customizations are respected.
+      path = route_path_for(record)
+      unless path.present?
         slug = record.respond_to?(:slug) && record.slug.present? ? record.slug : record.id
-        "#{collection_path}/#{slug}"
+        path = "#{collection_path}/#{slug}"
       end
       candidate = path.match?(%r{\Ahttps?://}i) ? path : "#{public_base_url}#{path.start_with?("/") ? path : "/#{path}"}"
       normalized_http_url(candidate) || public_base_url
+    end
+
+    def route_path_for(record)
+      return unless defined?(Refinery) && Refinery.respond_to?(:route_for_model)
+
+      helper_name = Refinery.route_for_model(record.class, admin: false)
+      helpers = refinery_route_helpers
+      return unless helpers&.respond_to?(helper_name)
+
+      helpers.public_send(helper_name, record)
+    rescue ArgumentError, NoMethodError, NameError
+      nil
+    end
+
+    def refinery_route_helpers
+      return @route_helpers if @route_helpers
+      return unless defined?(Rails) && Rails.application
+
+      mounted_helpers = Rails.application.routes.mounted_helpers
+      return mounted_helpers.refinery if mounted_helpers.respond_to?(:refinery)
+
+      return unless defined?(Refinery::Core::Engine)
+
+      Refinery::Core::Engine.routes.url_helpers
+    rescue NoMethodError
+      nil
     end
 
     def page_parts(page)
@@ -442,6 +469,13 @@ module RefineryRelay
     end
 
     def page_url(page)
+      route_path = route_path_for(page)
+      if route_path.present?
+        candidate = route_path.match?(%r{\Ahttps?://}i) ? route_path : "#{public_base_url}#{route_path.start_with?("/") ? route_path : "/#{route_path}"}"
+        normalized = normalized_http_url(candidate)
+        return normalized if normalized.present?
+      end
+
       path = page.respond_to?(:url) ? page.url.to_s : ""
       path = "/" if path.blank?
 

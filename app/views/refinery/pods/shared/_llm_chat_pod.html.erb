@@ -1,5 +1,12 @@
 <%#
-  Relay owns the widget implementation. This custom element is the only markup
-  supplied by the Relay Chat Pod; its trusted contents come from Refinery admin.
+  Relay owns the widget implementation. The admin setting contains the public
+  mount markup; the gem owns loading the Relay browser script so a relative or
+  stale script tag cannot be executed from Refinery's origin.
 %>
-<relay-llm-widget><%= raw RefineryRelay::RelaySetting.current.widget_markup.to_s %></relay-llm-widget>
+<% widget_markup = RefineryRelay::RelaySetting.current.widget_markup.to_s %>
+<% script_url = RefineryRelay::WidgetMarkup.script_url(widget_markup) %>
+<% if script_url.present? && !instance_variable_defined?(:@_refinery_relay_widget_script_rendered) %>
+  <% @_refinery_relay_widget_script_rendered = true %>
+  <%= javascript_include_tag script_url, defer: true %>
+<% end %>
+<relay-llm-widget><%= raw RefineryRelay::WidgetMarkup.mount_markup(widget_markup) %></relay-llm-widget>
