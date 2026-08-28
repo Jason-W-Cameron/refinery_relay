@@ -3,7 +3,7 @@
 require "test_helper"
 
 class RefineryRelayPodContractTest < ActiveSupport::TestCase
-  Pod = Data.define(:system_name)
+  Pod = Struct.new(:system_name, keyword_init: true)
 
   test "recognizes the Relay Chat pod type" do
     assert RefineryRelay::PodContract.chat_pod?(build_pod)

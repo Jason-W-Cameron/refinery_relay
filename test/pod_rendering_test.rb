@@ -33,11 +33,20 @@ class RefineryRelayPodRenderingTest < ActiveSupport::TestCase
                  view.set_pod_types(pod_types: [ "llm_chat" ])
   end
 
+  test "does not let a content limit omit Relay Chat" do
+    view = build_view
+
+    assert_equal [ "content", "relay_chat" ],
+                 view.set_pod_types(pod_types: [ "content" ], limit: 5)
+    assert_nil view.set_pod_limit(limit: 5)
+  end
+
   private
 
   def build_view
     base_helper = Module.new do
       define_method(:set_pod_types) { |locals| locals[:pod_types] }
+      define_method(:set_pod_limit) { |locals| locals[:limit] }
     end
 
     view_class = Class.new do

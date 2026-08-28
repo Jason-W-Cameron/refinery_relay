@@ -1,0 +1,8 @@
+/*
+ * Compatibility entry point for Rails 5 hosts that still include the
+ * Refinery Relay application stylesheet from their Sprockets manifest.
+ *
+ * The current Relay widget supplies its own styles, so no host-side CSS is
+ * required here. Keeping this logical asset present prevents Sprockets 3
+ * from failing while compiling existing manifests.
+ */

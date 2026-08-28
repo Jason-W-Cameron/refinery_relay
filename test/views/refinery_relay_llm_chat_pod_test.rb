@@ -3,7 +3,7 @@
 require "test_helper"
 
 class RefineryRelayLlmChatPodTest < ActionView::TestCase
-  Pod = Data.define(:id, :system_name)
+  Pod = Struct.new(:id, :system_name)
 
   setup do
     RefineryRelay::RelaySetting.delete_all
@@ -23,7 +23,7 @@ class RefineryRelayLlmChatPodTest < ActionView::TestCase
   test "loads Relay's script and renders the mount markup without pasted scripts" do
     widget_markup = '<script src="https://relay.example/niimble-relay-widget.js"></script><niimble-relay-chat relay-url="https://relay.example" widget-key="nrw_test"></niimble-relay-chat>'
     RefineryRelay::RelaySetting.create!(
-      widget_markup:
+      widget_markup: widget_markup
     )
 
     render partial: "refinery/pods/shared/relay_chat_pod", locals: { pod: Pod.new(42, "relay_chat") }

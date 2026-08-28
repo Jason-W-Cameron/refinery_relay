@@ -9,9 +9,11 @@ module RefineryRelay
     class ConfigurationError < StandardError; end
     class UpstreamError < StandardError; end
 
-    Response = Data.define(:status, :payload)
+    Response = Struct.new(:status, :payload, keyword_init: true)
 
-    def self.call(**) = new(**).call
+    def self.call(**options)
+      new(**options).call
+    end
 
     def initialize(conversation_id:, message:, visitor_id:, context:)
       @conversation_id = conversation_id.presence
@@ -57,10 +59,10 @@ module RefineryRelay
         request["Content-Type"] = "application/json"
         request["Accept"] = "application/json"
         request.body = {
-          conversation_id:,
-          message:,
-          visitor_id:,
-          context:
+          conversation_id: conversation_id,
+          message: message,
+          visitor_id: visitor_id,
+          context: context
         }.compact.to_json
       end
     end

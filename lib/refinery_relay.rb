@@ -11,12 +11,21 @@ require "refinery_relay/engine"
 module RefineryRelay
   class << self
     def configuration
-      Configuration.from_settings
+      configuration = Configuration.from_settings
+      configuration.redis = @runtime_configuration.redis if @runtime_configuration && @runtime_configuration.redis
+      configuration
+    end
+
+    # Keep the initializer API used by existing Rails 5 Refinery hosts. New
+    # installations store settings in RelaySetting, but older hosts commonly
+    # configure the Redis connection in config/initializers/refinery_relay.rb.
+    def configure
+      @runtime_configuration ||= Configuration.new
+      yield(@runtime_configuration)
     end
 
     def reset_configuration!
-      # Settings are read from the database for every request, so there is no
-      # process-local configuration cache to reset.
+      @runtime_configuration = nil
     end
   end
 end

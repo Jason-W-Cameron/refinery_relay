@@ -92,9 +92,9 @@ module RefineryRelay
       end
 
       def next_migration_timestamp
-        used_timestamps = Dir.glob(destination_path("db/migrate/*.rb")).filter_map do |path|
+        used_timestamps = Dir.glob(destination_path("db/migrate/*.rb")).map do |path|
           File.basename(path)[/\A(\d{14})_/, 1]
-        end
+        end.compact
         timestamp = Time.now.utc
         timestamp += 1.second while used_timestamps.include?(timestamp.strftime("%Y%m%d%H%M%S"))
         timestamp.strftime("%Y%m%d%H%M%S")

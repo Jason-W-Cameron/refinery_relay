@@ -20,43 +20,59 @@ module RefineryRelay
     SOURCE_OPTIONS = [
       { key: "pages", label: "Pages" },
       { key: "blog_posts", label: "Blog posts" },
-      { key: "works", label: "Works" },
-      { key: "expertises", label: "Expertises" },
+      { key: "copywritings", label: "Copywritings" },
       { key: "faqs", label: "FAQs" },
-      { key: "industries", label: "Industries" },
-      { key: "local_businesses", label: "Local businesses" },
-      { key: "brands", label: "Brands" }
+      { key: "info_centres", label: "Info centres" },
+      { key: "office_locations", label: "Office locations" },
+      { key: "products", label: "Products" },
+      { key: "projects", label: "Projects" },
+      { key: "testimonials", label: "Testimonials" },
+      { key: "varieties", label: "Varieties" },
+      { key: "video_libraries", label: "Video libraries" }
     ].freeze
     SOURCE_TYPES = SOURCE_OPTIONS.map { |source| source.fetch(:key) }.freeze
     SOURCE_DEFINITIONS = {
       "pages" => { model: "Refinery::Page" },
       "blog_posts" => {
         model: "Refinery::Blog::Post", title: :title,
-        fields: %i[short_description custom_teaser body], path: "/blog/posts"
+        fields: %i[custom_teaser body custom_url], path: "/blog/posts"
       },
-      "works" => {
-        model: "Refinery::Works::Work", title: :title,
-        fields: %i[industry short_description jumbo body_title body_subtitle body_description quote url],
-        path: "/works"
-      },
-      "expertises" => {
-        model: "Refinery::Expertises::Expertise", title: :title,
-        fields: %i[banner_text short_subtitle short_description jumbo quote url seo_title seo_description],
-        path: "/expertises"
+      "copywritings" => {
+        model: "Refinery::Copywritings::Copywriting", title: :name,
+        fields: %i[body], path: "/copywritings"
       },
       "faqs" => {
         model: "Refinery::Faqs::Faq", title: :question, fields: %i[answer], path: "/faqs"
       },
-      "industries" => {
-        model: "Refinery::Industries::Industry", title: :name, fields: [], path: "/industries"
+      "info_centres" => {
+        model: "Refinery::InfoCentres::InfoCentre", title: :title,
+        fields: %i[body keywords], path: "/info_centres"
       },
-      "local_businesses" => {
-        model: "Refinery::LocalBusinesses::LocalBusiness", title: :name,
-        fields: %i[street_address address_locality address_region postal_code address_country telephone website_url description],
-        path: "/local_businesses"
+      "office_locations" => {
+        model: "Refinery::OfficeLocations::OfficeLocation", title: :name,
+        fields: %i[address email contact_number], path: "/office_locations"
       },
-      "brands" => {
-        model: "Refinery::Brands::Brand", title: :title, fields: %i[year url], path: "/brands"
+      "products" => {
+        model: "Refinery::Products::Product", title: :name,
+        fields: %i[stock_code description short_description dimensions price seo_title seo_description],
+        path: "/products"
+      },
+      "projects" => {
+        model: "Refinery::Projects::Project", title: :name,
+        fields: %i[stock_code description short_description video_share_url price base_price seo_title seo_description],
+        path: "/projects"
+      },
+      "testimonials" => {
+        model: "Refinery::Testimonials::Testimonial", title: :name,
+        fields: %i[title body], path: "/testimonials"
+      },
+      "varieties" => {
+        model: "Refinery::Varieties::Variety", title: :name,
+        fields: %i[body short_description seo_title seo_description], path: "/taxidermy"
+      },
+      "video_libraries" => {
+        model: "Refinery::VideoLibraries::VideoLibrary", title: :name,
+        fields: %i[description youtube_url seo_title seo_description], path: "/video_libraries"
       }
     }.freeze
 
@@ -222,7 +238,7 @@ module RefineryRelay
     end
 
     def normalize_source_types(values)
-      Array(values).map(&:to_s).intersection(SOURCE_TYPES)
+      Array(values).map(&:to_s) & SOURCE_TYPES
     end
 
     def document_for(page)
@@ -260,13 +276,13 @@ module RefineryRelay
 
       definition = SOURCE_DEFINITIONS.fetch(source_type)
       title = plain_text(record.public_send(definition.fetch(:title))).presence || "Untitled #{source_type.humanize.downcase}"
-      fields = definition.fetch(:fields).filter_map do |field|
+      fields = definition.fetch(:fields).each_with_object([]) do |field, values|
         next unless record.respond_to?(field)
 
         text = plain_text(record.public_send(field))
-        [ field.to_s.humanize, text ] if text.present?
+        values << [ field.to_s.humanize, text ] if text.present?
       end
-      pods = source_type.in?(%w[works expertises]) ? page_pods(record) : []
+      pods = []
       content = ([ "Title: #{title}" ] + fields.map { |label, text| "#{label}: #{text}" } + pod_content(pods)).join("\n\n")
       updated_at = ([ record.updated_at, record.respond_to?(:published_at) ? record.published_at : nil ] + pods.map(&:updated_at)).compact.max || Time.current
       metadata = {

@@ -40,16 +40,19 @@ module RefineryRelay
     end
 
     # JSON-in-text keeps this setting portable across host database adapters.
-    serialize :source_types, coder: JSON
+    # Rails 5 stores serialized values as YAML. Existing Refinery Relay rows
+    # therefore contain values such as `---\n- pages\n`, so use the native
+    # Array serializer rather than the JSON coder used by newer Rails lines.
+    serialize :source_types, Array
 
     def source_types
       values = super
       values = DEFAULT_SOURCE_TYPES if values.nil?
-      Array(values).map(&:to_s).intersection(DocumentFeed::SOURCE_TYPES)
+      Array(values).map(&:to_s) & DocumentFeed::SOURCE_TYPES
     end
 
     def source_types=(values)
-      super(Array(values).map(&:to_s).intersection(DocumentFeed::SOURCE_TYPES))
+      super(Array(values).map(&:to_s) & DocumentFeed::SOURCE_TYPES)
     end
 
     validates :chat_open_timeout_seconds, :sync_open_timeout_seconds,

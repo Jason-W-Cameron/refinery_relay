@@ -13,11 +13,17 @@ module RefineryRelay
 
     class CacheUnavailable < StandardError; end
 
-    def self.available? = new.available?
+    def self.available?
+      new.available?
+    end
 
-    def self.mark_unavailable!(resets_at:) = new.mark_unavailable!(resets_at:)
+    def self.mark_unavailable!(resets_at:)
+      new.mark_unavailable!(resets_at: resets_at)
+    end
 
-    def self.clear_unavailability! = new.clear_unavailability!
+    def self.clear_unavailability!
+      new.clear_unavailability!
+    end
 
     def initialize(redis: nil)
       @redis = redis || configured_redis
@@ -72,7 +78,10 @@ module RefineryRelay
     attr_reader :redis
 
     def configured_redis
-      redis_url = RefineryRelay.configuration.redis_url.to_s
+      configuration = RefineryRelay.configuration
+      return configuration.redis if configuration.respond_to?(:redis) && configuration.redis
+
+      redis_url = configuration.redis_url.to_s
       return nil if redis_url.blank?
 
       Redis.new(url: redis_url)

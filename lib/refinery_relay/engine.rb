@@ -45,12 +45,15 @@ module RefineryRelay
 
       [
         "Refinery::Blog::Post",
-        "Refinery::Works::Work",
-        "Refinery::Expertises::Expertise",
+        "Refinery::Copywritings::Copywriting",
         "Refinery::Faqs::Faq",
-        "Refinery::Industries::Industry",
-        "Refinery::LocalBusinesses::LocalBusiness",
-        "Refinery::Brands::Brand"
+        "Refinery::InfoCentres::InfoCentre",
+        "Refinery::OfficeLocations::OfficeLocation",
+        "Refinery::Products::Product",
+        "Refinery::Projects::Project",
+        "Refinery::Testimonials::Testimonial",
+        "Refinery::Varieties::Variety",
+        "Refinery::VideoLibraries::VideoLibrary"
       ].each do |name|
         model = name.safe_constantize
         install_callback(model, RefineryRelay::SourceTombstoneCallbacks) if model

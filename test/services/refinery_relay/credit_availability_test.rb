@@ -8,7 +8,9 @@ class RefineryRelayCreditAvailabilityTest < ActiveSupport::TestCase
       @values = {}
     end
 
-    def get(key) = @values[key]
+    def get(key)
+      @values[key]
+    end
 
     def set(key, value, nx: false, ex: nil)
       return nil if nx && @values.key?(key)

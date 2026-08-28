@@ -7,11 +7,20 @@ module RefineryRelay
   # view context.
   module PodRendering
     RENDERED_IVAR = :@_refinery_relay_chat_pod_rendered
+    UNLIMITED_IVAR = :@_refinery_relay_chat_pod_unlimited
 
     module HelperMethods
       def set_pod_types(locals)
         pod_types = super
         RefineryRelay::PodRendering.pod_types_for(pod_types, self, locals)
+      end
+
+      def set_pod_limit(locals)
+        limit = super
+        return limit unless instance_variable_get(RefineryRelay::PodRendering::UNLIMITED_IVAR)
+
+        instance_variable_set(RefineryRelay::PodRendering::UNLIMITED_IVAR, false)
+        nil
       end
     end
 
@@ -34,6 +43,13 @@ module RefineryRelay
             !view_context.instance_variable_get(RENDERED_IVAR)
         values << PodContract::POD_TYPE
         view_context.instance_variable_set(RENDERED_IVAR, true)
+      end
+
+      # refinerycms-pods applies the host's limit after filtering by type. If
+      # chat is among those types, an unrelated content limit can silently
+      # omit it. Clear that one limit so the configured chat is always shown.
+      if values.include?(PodContract::POD_TYPE) && locals.respond_to?(:key?) && locals.key?(:limit)
+        view_context.instance_variable_set(UNLIMITED_IVAR, true)
       end
 
       values

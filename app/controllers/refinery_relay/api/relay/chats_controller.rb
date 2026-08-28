@@ -17,7 +17,7 @@ module RefineryRelay
           return render_unavailable unless conversation_id || RefineryRelay::CreditAvailability.available?
 
           result = RefineryRelay::ChatClient.call(
-            conversation_id:,
+            conversation_id: conversation_id,
             message: params.require(:message).to_s.strip,
             visitor_id: params[:visitor_id],
             context: context_params
