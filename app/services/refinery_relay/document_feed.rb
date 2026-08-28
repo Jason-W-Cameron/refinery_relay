@@ -17,68 +17,17 @@ module RefineryRelay
     DEFAULT_PAGE_SIZE = 25
     MAX_PAGE_SIZE = 100
     POD_TEXT_FIELDS = %w[body body2 body3 hidden_body].freeze
-    SOURCE_OPTIONS = [
-      { key: "pages", label: "Pages" },
-      { key: "blog_posts", label: "Blog posts" },
-      { key: "copywritings", label: "Copywritings" },
-      { key: "faqs", label: "FAQs" },
-      { key: "info_centres", label: "Info centres" },
-      { key: "office_locations", label: "Office locations" },
-      { key: "products", label: "Products" },
-      { key: "projects", label: "Projects" },
-      { key: "testimonials", label: "Testimonials" },
-      { key: "varieties", label: "Varieties" },
-      { key: "video_libraries", label: "Video libraries" }
-    ].freeze
-    SOURCE_TYPES = SOURCE_OPTIONS.map { |source| source.fetch(:key) }.freeze
-    SOURCE_DEFINITIONS = {
-      "pages" => { model: "Refinery::Page" },
-      "blog_posts" => {
-        model: "Refinery::Blog::Post", title: :title,
-        fields: %i[custom_teaser body custom_url], path: "/blog/posts"
-      },
-      "copywritings" => {
-        model: "Refinery::Copywritings::Copywriting", title: :name,
-        fields: %i[body], path: "/copywritings"
-      },
-      "faqs" => {
-        model: "Refinery::Faqs::Faq", title: :question, fields: %i[answer], path: "/faqs"
-      },
-      "info_centres" => {
-        model: "Refinery::InfoCentres::InfoCentre", title: :title,
-        fields: %i[body keywords], path: "/info_centres"
-      },
-      "office_locations" => {
-        model: "Refinery::OfficeLocations::OfficeLocation", title: :name,
-        fields: %i[address email contact_number], path: "/office_locations"
-      },
-      "products" => {
-        model: "Refinery::Products::Product", title: :name,
-        fields: %i[stock_code description short_description dimensions price seo_title seo_description],
-        path: "/products"
-      },
-      "projects" => {
-        model: "Refinery::Projects::Project", title: :name,
-        fields: %i[stock_code description short_description video_share_url price base_price seo_title seo_description],
-        path: "/projects"
-      },
-      "testimonials" => {
-        model: "Refinery::Testimonials::Testimonial", title: :name,
-        fields: %i[title body], path: "/testimonials"
-      },
-      "varieties" => {
-        model: "Refinery::Varieties::Variety", title: :name,
-        fields: %i[body short_description seo_title seo_description], path: "/taxidermy"
-      },
-      "video_libraries" => {
-        model: "Refinery::VideoLibraries::VideoLibrary", title: :name,
-        fields: %i[description youtube_url seo_title seo_description], path: "/video_libraries"
-      }
-    }.freeze
+
+    def self.source_options
+      SourceRegistry.options
+    end
+
+    def self.source_types
+      SourceRegistry.keys
+    end
 
     def self.source_type_for(model)
-      model_name = model.respond_to?(:name) ? model.name.to_s : model.to_s
-      SOURCE_DEFINITIONS.find { |_source_type, definition| definition.fetch(:model) == model_name }&.first
+      SourceRegistry.source_type_for(model)
     end
 
     class InvalidCursor < StandardError; end
@@ -155,7 +104,7 @@ module RefineryRelay
       while limit.positive? && source_index < source_types.length
         source_type = source_types.fetch(source_index)
         records, more_records = source_batch(source_type, last_id, limit)
-        documents.concat(records.map { |record| document_for_source(record, source_type) })
+        documents.concat(records.map { |record| document_for_source(record, source_type) }.compact)
         limit -= records.length
 
         if more_records
@@ -213,11 +162,16 @@ module RefineryRelay
     def source_scope(source_type, last_id)
       return page_scope(last_id) if source_type == "pages"
 
-      definition = SOURCE_DEFINITIONS.fetch(source_type)
-      model = definition.fetch(:model).safe_constantize
+      source = SourceRegistry.fetch(source_type)
+      return unless source
+
+      model = source.model
       return unless model
 
-      relation = model.respond_to?(:live) ? model.live : model.all
+      scope = source.definition.fetch(:scope)
+      return unless scope
+
+      relation = scope.respond_to?(:call) ? scope.call(model) : model.public_send(scope)
       relation.where(model.arel_table[:id].gt(last_id)).order(id: :asc)
     end
 
@@ -238,7 +192,7 @@ module RefineryRelay
     end
 
     def normalize_source_types(values)
-      Array(values).map(&:to_s) & SOURCE_TYPES
+      Array(values).map(&:to_s) & SourceRegistry.keys
     end
 
     def document_for(page)
@@ -274,8 +228,13 @@ module RefineryRelay
     def document_for_source(record, source_type)
       return document_for(record) if source_type == "pages"
 
-      definition = SOURCE_DEFINITIONS.fetch(source_type)
-      title = plain_text(record.public_send(definition.fetch(:title))).presence || "Untitled #{source_type.humanize.downcase}"
+      source = SourceRegistry.fetch(source_type)
+      return unless source
+
+      definition = source.definition
+      title_attribute = definition[:title]
+      title_value = record.public_send(title_attribute) if title_attribute && record.respond_to?(title_attribute)
+      title = plain_text(title_value).presence || "Untitled #{source_type.humanize.downcase}"
       fields = definition.fetch(:fields).each_with_object([]) do |field, values|
         next unless record.respond_to?(field)
 
@@ -283,6 +242,9 @@ module RefineryRelay
         values << [ field.to_s.humanize, text ] if text.present?
       end
       pods = []
+      url = source_url(record, definition)
+      return unless url.present?
+
       content = ([ "Title: #{title}" ] + fields.map { |label, text| "#{label}: #{text}" } + pod_content(pods)).join("\n\n")
       updated_at = ([ record.updated_at, record.respond_to?(:published_at) ? record.published_at : nil ] + pods.map(&:updated_at)).compact.max || Time.current
       metadata = {
@@ -293,7 +255,7 @@ module RefineryRelay
       document = {
         "external_id" => "#{source_type}:#{record.id}",
         "title" => title,
-        "url" => source_url(record, definition.fetch(:path)),
+        "url" => url,
         "content" => content,
         "content_type" => source_type.singularize,
         "language" => ::I18n.locale.to_s.presence || "en",
@@ -314,29 +276,37 @@ module RefineryRelay
       blocks + pod_blocks(pods)
     end
 
-    def source_url(record, collection_path)
-      # FriendlyId's custom_url is the record's parameter, not the public
-      # route itself. Resolve the route through Refinery so mounted paths,
-      # extension namespaces, and route customizations are respected.
-      path = route_path_for(record)
-      unless path.present?
-        slug = record.respond_to?(:slug) && record.slug.present? ? record.slug : record.id
-        path = "#{collection_path}/#{slug}"
-      end
+    def source_url(record, definition)
+      # Plugin admin URLs identify an engine during discovery but must never be
+      # emitted as public Relay citations. A source has to provide a verified
+      # public route helper, either automatically or via its source contract.
+      path = route_path_for(record, definition.fetch(:route))
+      return unless public_route_path?(path)
+
       candidate = path.match?(%r{\Ahttps?://}i) ? path : "#{public_base_url}#{path.start_with?("/") ? path : "/#{path}"}"
-      normalized_http_url(candidate) || public_base_url
+      normalized_http_url(candidate)
     end
 
-    def route_path_for(record)
+    def route_path_for(record, route_name = nil)
       return unless defined?(Refinery) && Refinery.respond_to?(:route_for_model)
 
-      helper_name = Refinery.route_for_model(record.class, admin: false)
+      helper_name = route_name.presence || Refinery.route_for_model(record.class, admin: false)
       helpers = refinery_route_helpers
       return unless helpers&.respond_to?(helper_name)
 
       helpers.public_send(helper_name, record)
     rescue ArgumentError, NoMethodError, NameError
       nil
+    end
+
+    def public_route_path?(path)
+      return false if path.blank?
+      return true if path.match?(%r{\Ahttps?://}i)
+      return false unless path.start_with?("/")
+      return true unless defined?(::Refinery::Core) && ::Refinery::Core.respond_to?(:backend_route)
+
+      backend_path = "/#{::Refinery::Core.backend_route}"
+      path != backend_path && !path.start_with?("#{backend_path}/")
     end
 
     def refinery_route_helpers
@@ -485,13 +455,10 @@ module RefineryRelay
     end
 
     def page_url(page)
-      route_path = route_path_for(page)
-      if route_path.present?
-        candidate = route_path.match?(%r{\Ahttps?://}i) ? route_path : "#{public_base_url}#{route_path.start_with?("/") ? route_path : "/#{route_path}"}"
-        normalized = normalized_http_url(candidate)
-        return normalized if normalized.present?
-      end
-
+      # Refinery::Page#url contains the host's canonical nested public path.
+      # The generic route_for_model fallback resolves to Refinery's technical
+      # `/pages/:id` route, which is public but is not necessarily the URL
+      # visitors use on the host site.
       path = page.respond_to?(:url) ? page.url.to_s : ""
       path = "/" if path.blank?
 
@@ -502,6 +469,13 @@ module RefineryRelay
       end
       normalized = normalized_http_url(candidate)
       return normalized if normalized.present?
+
+      route_path = route_path_for(page)
+      if route_path.present?
+        candidate = route_path.match?(%r{\Ahttps?://}i) ? route_path : "#{public_base_url}#{route_path.start_with?("/") ? route_path : "/#{route_path}"}"
+        normalized = normalized_http_url(candidate)
+        return normalized if normalized.present?
+      end
 
       fallback = page.respond_to?(:slug) && page.slug.to_s != "home" ? "/#{page.slug}" : "/"
       normalized_http_url("#{public_base_url}#{fallback}") || public_base_url

@@ -18,6 +18,35 @@ class RefineryRelayDocumentFeedTest < ActiveSupport::TestCase
 
   FakeResource = Struct.new(:id, :title, :file_mime_type, :updated_at, :url, :file)
 
+  setup do
+    RefineryRelay::SourceRegistry.register(
+      key: "faqs",
+      label: "FAQs",
+      description: "Questions and answers",
+      model: FakeFaq.name,
+      title: :question,
+      fields: [ :answer ],
+      path: "/faqs",
+      scope: :live,
+      route: :faq_path
+    )
+    RefineryRelay::SourceRegistry.register(
+      key: "blog_posts",
+      label: "Blog posts",
+      model: FakeBlogPost.name,
+      title: :title,
+      fields: %i[custom_teaser body],
+      scope: :live,
+      route: :blog_post_path
+    )
+  end
+
+  teardown do
+    registered = RefineryRelay::SourceRegistry.instance_variable_get(:@registered_sources)
+    %w[faqs blog_posts].each { |key| registered.delete(key) } if registered
+    RefineryRelay::SourceRegistry.reset!
+  end
+
   class TestFeed < RefineryRelay::DocumentFeed
     def initialize(pages:, source_records: {}, **options)
       @pages = pages
@@ -125,6 +154,22 @@ class RefineryRelayDocumentFeedTest < ActiveSupport::TestCase
     assert_equal "https://sit.example/terms%20and%20conditions", document.fetch("url")
   end
 
+  test "prefers the page canonical URL over Refinery's generic page route" do
+    now = Time.utc(2026, 8, 25, 12, 0, 0)
+    page = FakePage.new(1, "Blog", "blog", "/blog", [], [], now)
+    route_helpers = Object.new
+    route_helpers.define_singleton_method(:page_path) { |_record| "/pages/blog" }
+
+    document = TestFeed.new(
+      pages: [ page ],
+      cursor: nil,
+      public_base_url: "http://localhost:3001",
+      route_helpers: route_helpers
+    ).call.fetch("documents").first
+
+    assert_equal "http://localhost:3001/blog", document.fetch("url")
+  end
+
   test "excludes referenced images and files from the text-only Relay feed" do
     now = Time.utc(2026, 8, 25, 12, 0, 0)
     image = FakeImage.new(8, "Start line", "Runners at the start line", "image/jpeg", now,
@@ -144,13 +189,16 @@ class RefineryRelayDocumentFeedTest < ActiveSupport::TestCase
     now = Time.utc(2026, 8, 25, 12, 0, 0)
     faq = FakeFaq.new(4, "How does Relay work?", "Relay indexes the selected Refinery content.", now, nil)
     page = FakePage.new(7, "Not selected", "not-selected", "/not-selected", [], [], now)
+    route_helpers = Object.new
+    route_helpers.define_singleton_method(:faq_path) { |record| "/faqs/#{record.id}" }
 
     payload = TestFeed.new(
       pages: [ page ],
       source_records: { "faqs" => [ faq ] },
       source_types: [ "faqs" ],
       cursor: nil,
-      public_base_url: "https://sit.example"
+      public_base_url: "https://sit.example",
+      route_helpers: route_helpers
     ).call
 
     assert_equal [ "faqs:4" ], payload.fetch("documents").map { |document| document.fetch("external_id") }
@@ -158,6 +206,24 @@ class RefineryRelayDocumentFeedTest < ActiveSupport::TestCase
     assert_equal "faq", document.fetch("content_type")
     assert_equal "https://sit.example/faqs/4", document.fetch("url")
     assert_includes document.fetch("content"), "Relay indexes the selected Refinery content."
+  end
+
+  test "does not emit source documents whose route resolves to the Refinery admin" do
+    now = Time.utc(2026, 8, 25, 12, 0, 0)
+    faq = FakeFaq.new(4, "How does Relay work?", "Relay indexes the selected Refinery content.", now, nil)
+    route_helpers = Object.new
+    route_helpers.define_singleton_method(:faq_path) { |_record| "/refinery/faqs/4" }
+
+    payload = TestFeed.new(
+      pages: [],
+      source_records: { "faqs" => [ faq ] },
+      source_types: [ "faqs" ],
+      cursor: nil,
+      public_base_url: "https://sit.example",
+      route_helpers: route_helpers
+    ).call
+
+    assert_equal [], payload.fetch("documents")
   end
 
   test "uses the Refinery route helper for source URLs" do

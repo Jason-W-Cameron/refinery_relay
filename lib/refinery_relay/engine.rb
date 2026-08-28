@@ -27,6 +27,7 @@ module RefineryRelay
     end
 
     config.to_prepare do
+      RefineryRelay::SourceRegistry.reset!
       RefineryRelay::PodRegistration.install!
       RefineryRelay::PodRendering.install!
       RefineryRelay::Engine.install_source_sync_callbacks!
@@ -43,20 +44,10 @@ module RefineryRelay
         install_callback(model, RefineryRelay::SourceSyncCallbacks) if model
       end
 
-      [
-        "Refinery::Blog::Post",
-        "Refinery::Copywritings::Copywriting",
-        "Refinery::Faqs::Faq",
-        "Refinery::InfoCentres::InfoCentre",
-        "Refinery::OfficeLocations::OfficeLocation",
-        "Refinery::Products::Product",
-        "Refinery::Projects::Project",
-        "Refinery::Testimonials::Testimonial",
-        "Refinery::Varieties::Variety",
-        "Refinery::VideoLibraries::VideoLibrary"
-      ].each do |name|
-        model = name.safe_constantize
-        install_callback(model, RefineryRelay::SourceTombstoneCallbacks) if model
+      RefineryRelay::SourceRegistry.options.each do |source|
+        next if source.key == "pages"
+
+        install_callback(source.model, RefineryRelay::SourceTombstoneCallbacks)
       end
     end
 

@@ -421,19 +421,7 @@
 </style>
 
 <div id="refinery-relay-settings">
-  <% source_descriptions = {
-    "pages" => "Published pages and their Pod content",
-    "blog_posts" => "Published articles and essays",
-    "copywritings" => "Reusable site copy",
-    "faqs" => "Questions and answers",
-    "info_centres" => "Information centre articles",
-    "office_locations" => "Office contact details",
-    "products" => "Product descriptions and details",
-    "projects" => "Project descriptions and details",
-    "testimonials" => "Customer testimonials",
-    "varieties" => "Taxidermy varieties",
-    "video_libraries" => "Video descriptions and links"
-  } %>
+  <% source_options = RefineryRelay::SourceRegistry.options %>
   <% relay_configured = @relay_setting.source_token.present? && @relay_setting.widget_markup.present? %>
 
   <div class="rr-canvas">
@@ -497,16 +485,16 @@
             <div class="rr-card-body">
               <%= form.hidden_field :source_types, multiple: true, value: "" %>
               <div class="rr-source-grid">
-                <% RefineryRelay::DocumentFeed::SOURCE_OPTIONS.each do |source| %>
-                  <% source_key = source.fetch(:key) %>
+                <% source_options.each do |source| %>
+                  <% source_key = source.key %>
                   <label class="rr-source-option">
                     <%= form.check_box :source_types,
                                        { multiple: true, include_hidden: false, class: "rr-checkbox" },
                                        source_key,
                                        nil %>
                     <span>
-                      <span class="rr-source-name"><%= source.fetch(:label) %></span>
-                      <span class="rr-source-description"><%= source_descriptions.fetch(source_key) %></span>
+                      <span class="rr-source-name"><%= source.label %></span>
+                      <span class="rr-source-description"><%= source.description %></span>
                     </span>
                     <span class="rr-source-check" aria-hidden="true">
                       <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>

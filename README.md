@@ -26,10 +26,16 @@ Relay environment variables or host initializer are required. The public Relay
 widget communicates directly with Relay using a public widget key; private chat
 credentials are never stored in the browser.
 
-The **Sources to ingest** checkboxes control which Refinery content families
-are exported by the direct feed: Pages, Blog posts, Works, Expertises, FAQs,
-Industries, Local businesses, and Brands. Pages are enabled by default;
-optional sources are skipped when their Refinery extension is not installed.
+The **Sources to ingest** checkboxes are generated from Refinery's registered
+engines, with no scan of every application model. Pages are enabled by default;
+an optional engine appears only when its primary model and database table can
+be resolved, and its public route helper can be verified. Standard and custom
+Refinery engines resolve automatically from their plugin route/model
+convention. The detector uses a model's `live` or `published` scope when one is
+available, and otherwise uses the model's normal public relation; an unusual
+engine can explicitly declare a stricter Relay model, fields, public scope, and
+public route helper with `RefineryRelay.register_source`. Plugin admin URLs are
+never used as Relay citation URLs.
 
 ## Pod compatibility
 

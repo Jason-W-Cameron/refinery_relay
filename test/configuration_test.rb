@@ -1,12 +1,33 @@
 require "test_helper"
 
 class RefineryRelayConfigurationTest < ActiveSupport::TestCase
+  class FakeFaqSource
+    def self.table_exists?
+      true
+    end
+
+    def self.column_names
+      %w[id question answer]
+    end
+  end
+
   setup do
+    RefineryRelay::SourceRegistry.register(
+      key: "faqs",
+      model: FakeFaqSource.name,
+      title: :question,
+      fields: [ :answer ],
+      scope: :live,
+      route: :faq_path
+    )
     RefineryRelay::RelaySetting.delete_all
   end
 
   teardown do
     RefineryRelay::RelaySetting.delete_all
+    registered = RefineryRelay::SourceRegistry.instance_variable_get(:@registered_sources)
+    registered.delete("faqs") if registered
+    RefineryRelay::SourceRegistry.reset!
   end
 
   test "loads Relay configuration from the saved Relay settings" do

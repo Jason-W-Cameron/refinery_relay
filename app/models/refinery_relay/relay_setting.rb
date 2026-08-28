@@ -48,11 +48,11 @@ module RefineryRelay
     def source_types
       values = super
       values = DEFAULT_SOURCE_TYPES if values.nil?
-      Array(values).map(&:to_s) & DocumentFeed::SOURCE_TYPES
+      Array(values).map(&:to_s) & SourceRegistry.keys
     end
 
     def source_types=(values)
-      super(Array(values).map(&:to_s) & DocumentFeed::SOURCE_TYPES)
+      super(Array(values).map(&:to_s) & SourceRegistry.keys)
     end
 
     validates :chat_open_timeout_seconds, :sync_open_timeout_seconds,

@@ -49,7 +49,7 @@ module RefineryRelay
                    sync_read_timeout_seconds: DEFAULT_SYNC_READ_TIMEOUT_SECONDS,
                    redis_url: nil)
       @source_token = source_token
-      @source_types = Array(source_types).map(&:to_s) & DocumentFeed::SOURCE_TYPES
+      @source_types = Array(source_types).map(&:to_s) & SourceRegistry.keys
       @public_base_url = public_base_url
       @chat_base_url = chat_base_url
       @chat_token = chat_token

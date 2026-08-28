@@ -5,12 +5,36 @@ require "test_helper"
 class RefineryRelayRelaySettingsControllerTest < ActionDispatch::IntegrationTest
   SETTINGS_PATH = "/refinery/relay_settings"
 
+  class FakeFaqSource
+    def self.table_exists?
+      true
+    end
+
+    def self.column_names
+      %w[id question answer]
+    end
+  end
+
   setup do
+    RefineryRelay::SourceRegistry.register(
+      key: "faqs",
+      label: "FAQs",
+      description: "Questions and answers",
+      model: FakeFaqSource.name,
+      title: :question,
+      fields: [ :answer ],
+      path: "/faqs",
+      scope: :live,
+      route: :faq_path
+    )
     RefineryRelay::RelaySetting.delete_all
   end
 
   teardown do
     RefineryRelay::RelaySetting.delete_all
+    registered = RefineryRelay::SourceRegistry.instance_variable_get(:@registered_sources)
+    registered.delete("faqs") if registered
+    RefineryRelay::SourceRegistry.reset!
   end
 
   test "shows the single Relay settings page in the Refinery admin" do
@@ -18,8 +42,9 @@ class RefineryRelayRelaySettingsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_select "h2", "Relay Settings"
-    assert_select "input[value='pages']"
-    assert_select "input[value='faqs']"
+    RefineryRelay::SourceRegistry.options.each do |source|
+      assert_select "input[value='#{source.key}']", count: 1
+    end
     assert_select "input[type='hidden'][name='relay_setting[source_types][]'][value='']"
     assert_select "code#relay-feed-endpoint", /refinery_relay\/api\/relay\/documents/
     assert_select "button[data-rr-copy='relay-feed-endpoint']", "Copy endpoint"
