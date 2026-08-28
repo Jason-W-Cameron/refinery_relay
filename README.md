@@ -29,13 +29,16 @@ credentials are never stored in the browser.
 The **Sources to ingest** checkboxes are generated from Refinery's registered
 engines, with no scan of every application model. Pages are enabled by default;
 an optional engine appears only when its primary model and database table can
-be resolved, and its public route helper can be verified. Standard and custom
-Refinery engines resolve automatically from their plugin route/model
-convention. The detector uses a model's `live` or `published` scope when one is
-available, and otherwise uses the model's normal public relation; an unusual
-engine can explicitly declare a stricter Relay model, fields, public scope, and
-public route helper with `RefineryRelay.register_source`. Plugin admin URLs are
-never used as Relay citation URLs.
+be resolved, its public route helpers resolve, and its visitor-facing collection
+page renders successfully to an anonymous request. Failed endpoints remain
+visible but unavailable in Settings, and Relay removes their previously indexed
+documents rather than publishing broken citations. Standard and custom Refinery
+engines resolve automatically from their plugin route/model convention. The
+detector uses a model's `live` or `published` scope when one is available, and
+otherwise uses the model's normal public relation; an unusual engine can
+explicitly declare a stricter Relay model, fields, public scope, collection URL,
+and public route helper with `RefineryRelay.register_source`. Plugin admin URLs
+are never used as Relay citation URLs.
 
 ## Pod compatibility
 

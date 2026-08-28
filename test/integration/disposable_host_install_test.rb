@@ -9,7 +9,10 @@ require "generators/refinery_relay/install/install_generator"
 
 class RefineryRelayDisposableHostInstallTest < ActiveSupport::TestCase
   test "generator output boots in an independent Rails host" do
-    Dir.mktmpdir("refinery-relay-host-", RefineryRelay::Engine.root.join("tmp")) do |temporary_root|
+    temporary_parent = RefineryRelay::Engine.root.join("tmp")
+    FileUtils.mkdir_p(temporary_parent)
+
+    Dir.mktmpdir("refinery-relay-host-", temporary_parent) do |temporary_root|
       host_root = File.join(temporary_root, "host")
       FileUtils.mkdir_p(host_root)
       FileUtils.cp_r("#{dummy_root}/.", host_root)

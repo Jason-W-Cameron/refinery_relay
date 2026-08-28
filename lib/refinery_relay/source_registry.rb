@@ -7,7 +7,8 @@ module RefineryRelay
   # Relay sources.
   class SourceRegistry
     Source = Struct.new(
-      :key, :label, :description, :model_name, :title, :fields, :path, :plugin_name, :scope, :route,
+      :key, :label, :description, :model_name, :title, :fields, :field_options, :path, :plugin_name, :scope, :route,
+      :citation_strategy, :collection_path, :citation_anchor,
       keyword_init: true
     ) do
       def model
@@ -26,16 +27,32 @@ module RefineryRelay
           model: model_name,
           title: title,
           fields: Array(fields),
+          field_options: Array(field_options),
           path: path,
           scope: scope,
-          route: route
+          route: route,
+          citation_strategy: citation_strategy,
+          collection_path: collection_path,
+          citation_anchor: citation_anchor
         }
+      end
+    end
+
+    SourceStatus = Struct.new(:source, :ingestible, :reason, keyword_init: true) do
+      def ingestible?
+        ingestible
       end
     end
 
     CORE_PLUGIN_NAMES = %w[core pages pods settings relay_settings].freeze
     TITLE_FIELDS = %w[title name question subject headline].freeze
     CONTENT_FIELDS = %w[body content description summary short_description teaser answer details].freeze
+    TEXT_COLUMN_TYPES = %i[string text].freeze
+    NON_CONTENT_FIELD_NAMES = %w[
+      id created_at updated_at deleted_at published_at unpublished_at position lock_version
+      type slug permalink friendly_id
+    ].freeze
+    SENSITIVE_FIELD_PATTERN = /(?:\A|_)(?:api|access|auth|credential|encrypted|password|secret|token|digest|salt|reset|confirmation)(?:\z|_)/i
 
     class << self
       # Custom engines with non-standard routes/models can declare exactly what
@@ -44,7 +61,16 @@ module RefineryRelay
       # RefineryRelay.register_source(
       #   plugin: "works", key: "works", model: "Refinery::Works::Work",
       #   title: :title, fields: %i[summary body],
-      #   scope: :live, route: :work_path
+      #   field_options: %i[summary body seo_description],
+      #   scope: :live, route: :work_path,
+      #   citation_strategy: :record
+      #
+      # Collection-only engines can keep citations on their visitor-facing
+      # landing page without hardcoding a client-specific source in the gem:
+      #
+      #   citation_strategy: :collection_anchor,
+      #   collection_path: "/faqs",
+      #   citation_anchor: ->(faq) { "faq-#{faq.id}" }
       # )
       def register(attributes)
         source = build_source(attributes)
@@ -54,12 +80,13 @@ module RefineryRelay
       end
 
       def known
-        @known ||= begin
-          sources = { "pages" => page_source }
-          registered_sources.each_value { |source| sources[source.key] = source }
-          plugin_sources.each { |source| sources[source.key] ||= source }
-          sources.values.sort_by { |source| [ source.key == "pages" ? 0 : 1, source.key ] }
-        end
+        # Refinery registers host engines during application preparation. Do
+        # not cache a partial list created before that work finishes: it would
+        # leave a plugged-in Relay installation permanently showing only Pages.
+        sources = { "pages" => page_source }
+        registered_sources.each_value { |source| sources[source.key] = source }
+        plugin_sources.each { |source| sources[source.key] ||= source }
+        sources.values.sort_by { |source| [ source.key == "pages" ? 0 : 1, source.key ] }
       end
 
       def available
@@ -74,8 +101,14 @@ module RefineryRelay
         available.map(&:key)
       end
 
-      def options
-        available.select { |source| ingestible?(source) }
+      # Installed sources stay visible when their visitor-facing endpoint is
+      # broken, so Settings can explain why they cannot be selected.
+      def source_statuses(host: nil, protocol: "http")
+        available.map { |source| source_status(source, host: host, protocol: protocol) }
+      end
+
+      def options(host: nil, protocol: "http")
+        source_statuses(host: host, protocol: protocol).select(&:ingestible?).map(&:source)
       end
 
       def fetch(key)
@@ -88,7 +121,23 @@ module RefineryRelay
       end
 
       def reset!
-        @known = nil
+        # Source discovery is intentionally evaluated on demand; see known.
+      end
+
+      # Keep the persisted settings and feed on the exact same source contract.
+      # Unknown sources and fields are ignored rather than being trusted from a
+      # form submission or an older cursor.
+      def normalize_field_mappings(mappings)
+        Hash(mappings || {}).each_with_object({}) do |(source_key, fields), normalized|
+          source = fetch(source_key)
+          next unless source
+
+          allowed_fields = Array(source.field_options).map(&:to_s)
+          selected_fields = Array(fields).map(&:to_s).select { |field| allowed_fields.include?(field) }.uniq
+          normalized[source.key] = selected_fields if selected_fields.present?
+        end
+      rescue TypeError
+        {}
       end
 
       private
@@ -194,12 +243,17 @@ module RefineryRelay
       # provide a stricter publication scope than the relation available on the
       # model.
       def generic_source(model, key, plugin)
+        plugin_key = normalized_plugin_name(plugin)
         fields = model.respond_to?(:column_names) ? model.column_names.map(&:to_s) : []
         title = TITLE_FIELDS.find { |field| fields.include?(field) }
         title ||= TITLE_FIELDS.find { |field| model.instance_methods.include?(field.to_sym) }
         return unless title
 
-        content_fields = CONTENT_FIELDS.select { |field| fields.include?(field) && field != title }
+        collection_path = public_collection_path_for(plugin_key, key)
+        return unless collection_path
+
+        field_options = selectable_fields_for(model, title)
+        content_fields = CONTENT_FIELDS.select { |field| field_options.include?(field) }
         build_source(
           key: key,
           label: plugin_label(plugin, key),
@@ -207,13 +261,45 @@ module RefineryRelay
           model: model.name.to_s,
           title: title.to_sym,
           fields: content_fields.map(&:to_sym),
-          path: "/#{key}",
+          field_options: field_options.map(&:to_sym),
+          path: collection_path,
           plugin: plugin.name.to_s,
           scope: public_scope_for(model),
-          route: public_route_for(model)
+          route: public_route_for(model),
+          # Prefer a canonical record URL only when the feed can verify it.
+          # DocumentFeed falls back to this verified collection page when a
+          # legacy engine's individual show route is not safe to cite.
+          citation_strategy: :record_or_collection,
+          collection_path: collection_path
         )
       rescue StandardError
         nil
+      end
+
+      # These are fields an administrator may explicitly choose to send to
+      # Relay. Defaults remain deliberately narrower (`CONTENT_FIELDS`) so an
+      # upgrade does not change an existing site's indexed content. Only text
+      # columns are candidates, and identifiers, routing identifiers, timestamps,
+      # associations, and obvious secrets are never selectable.
+      def selectable_fields_for(model, title)
+        return [] unless model.respond_to?(:columns)
+
+        model.columns.filter_map do |column|
+          name = column.name.to_s
+          next unless TEXT_COLUMN_TYPES.include?(column.type.to_sym)
+          next if name == title.to_s
+          next if non_content_field?(name)
+
+          name
+        end
+      rescue StandardError
+        []
+      end
+
+      def non_content_field?(name)
+        NON_CONTENT_FIELD_NAMES.include?(name) ||
+          name.end_with?("_id", "_ids") ||
+          name.match?(SENSITIVE_FIELD_PATTERN)
       end
 
       # Refinery engines are not required to define a `.live` scope. Older and
@@ -231,22 +317,37 @@ module RefineryRelay
 
       def plugin_label(plugin, fallback)
         label = plugin.title if plugin.respond_to?(:title)
-        label = nil if label.to_s.start_with?("translation missing")
+        label = nil if label.to_s.match?(/\Atranslation missing:/i)
         label.presence || fallback.humanize
       rescue StandardError
         fallback.humanize
       end
 
-      def ingestible?(source)
-        return true if source.key == "pages"
-        return false unless source.scope.present? && source.route.present?
-        return false if source.route.to_s.include?("admin")
+      def source_status(source, host:, protocol:)
+        return SourceStatus.new(source: source, ingestible: true) if source.key == "pages"
+        return unavailable(source, "does not expose a public content scope") unless source.scope.present?
+        return unavailable(source, "does not expose a public record route") unless source.route.present?
+        return unavailable(source, "uses an admin route") if source.route.to_s.include?("admin")
+
+        collection_path = source.collection_path.to_s
+        return unavailable(source, "does not declare a public collection URL") if collection_path.blank?
 
         helpers = refinery_route_helpers
-        helpers && helpers.respond_to?(source.route)
+        return unavailable(source, "does not expose its public route helper") unless helpers&.respond_to?(source.route)
+
+        endpoint = PublicEndpointValidator.call(path: collection_path, host: host, protocol: protocol)
+        return SourceStatus.new(source: source, ingestible: true) if endpoint.available?
+
+        unavailable(source, endpoint.reason)
       rescue StandardError
-        false
+        unavailable(source, "could not be checked")
       end
+
+      def unavailable(source, reason)
+        SourceStatus.new(source: source, ingestible: false, reason: reason)
+      end
+
+      public :source_status
 
       def public_route_for(model)
         return unless defined?(::Refinery) && ::Refinery.respond_to?(:route_for_model)
@@ -254,6 +355,37 @@ module RefineryRelay
         ::Refinery.route_for_model(model, admin: false)
       rescue ArgumentError, NameError
         nil
+      end
+
+      # The plugin's name is not a URL contract. Prefer its public collection
+      # route helper and do not offer an automatically detected source if the
+      # host does not expose one. Custom engines can declare collection_path
+      # explicitly with register_source.
+      def public_collection_path_for(plugin_key, source_key)
+        helpers = refinery_route_helpers
+        return unless helpers
+
+        [
+          "#{plugin_key}_#{plugin_key}_path",
+          "#{plugin_key}_#{source_key}_path",
+          "#{plugin_key}_path",
+          "#{plugin_key}_root_path",
+          "#{source_key}_path"
+        ].uniq.each do |helper_name|
+          next unless helpers.respond_to?(helper_name)
+
+          path = helpers.public_send(helper_name)
+          return path if public_collection_path?(path)
+        rescue ArgumentError, NoMethodError
+          next
+        end
+        nil
+      end
+
+      def public_collection_path?(path)
+        path.to_s.start_with?("/") && !path.to_s.start_with?("/#{::Refinery::Core.backend_route}/")
+      rescue NameError
+        path.to_s.start_with?("/") && !path.to_s.start_with?("/refinery/")
       end
 
       def refinery_route_helpers
@@ -287,10 +419,14 @@ module RefineryRelay
           model_name: attributes.fetch(:model).to_s,
           title: attributes[:title],
           fields: Array(attributes[:fields]),
+          field_options: Array(attributes.fetch(:field_options, attributes[:fields])),
           path: attributes.fetch(:path, "/#{key}"),
           plugin_name: plugin_name,
           scope: attributes[:scope],
-          route: attributes[:route]
+          route: attributes[:route],
+          citation_strategy: attributes.fetch(:citation_strategy, :record).to_sym,
+          collection_path: attributes.fetch(:collection_path, attributes.fetch(:path, "/#{key}")),
+          citation_anchor: attributes[:citation_anchor]
         )
       end
 

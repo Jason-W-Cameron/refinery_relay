@@ -65,6 +65,14 @@ module RefineryRelay
                   "db/migrate/#{timestamp}_add_source_types_to_refinery_relay_settings.rb"
       end
 
+      def install_source_field_mappings_migration
+        return if Dir.glob(destination_path("db/migrate/*_add_source_field_mappings_to_refinery_relay_settings.rb")).any?
+
+        timestamp = next_migration_timestamp
+        copy_file "add_source_field_mappings_to_refinery_relay_settings.rb",
+                  "db/migrate/#{timestamp}_add_source_field_mappings_to_refinery_relay_settings.rb"
+      end
+
       def install_pod_type_migration
         return if Dir.glob(destination_path("db/migrate/*_rename_llm_chat_pod_type_to_relay_chat.rb")).any?
 

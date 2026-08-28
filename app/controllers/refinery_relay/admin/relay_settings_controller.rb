@@ -10,6 +10,7 @@ module RefineryRelay
 
       def edit
         @relay_setting = RelaySetting.current
+        @source_statuses = SourceRegistry.source_statuses(host: request.host_with_port, protocol: request.protocol)
         @generated_source_token = session.delete(:refinery_relay_generated_source_token)
       end
 
@@ -49,12 +50,17 @@ module RefineryRelay
       def relay_setting_params
         attributes = params.require(:relay_setting).permit(
           :widget_markup,
-          source_types: []
+          source_types: [],
+          source_field_mappings: {}
         )
 
         RelaySetting::SECRET_ATTRIBUTES.each do |attribute|
           attributes.delete(attribute) if attributes[attribute].blank?
         end
+
+        allowed_source_types = SourceRegistry.options(host: request.host_with_port, protocol: request.protocol).map(&:key)
+        attributes[:source_types] = Array(attributes[:source_types]).map(&:to_s) & allowed_source_types
+        attributes[:source_field_mappings] = attributes[:source_field_mappings].to_h.slice(*attributes[:source_types])
 
         attributes
       end

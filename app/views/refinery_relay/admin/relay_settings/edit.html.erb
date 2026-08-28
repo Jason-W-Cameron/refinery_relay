@@ -33,8 +33,8 @@
   /* ---------- Canvas ---------- */
   #refinery-relay-settings .rr-canvas {
     background: var(--rr-canvas);
-    border-radius: 20px;
-    padding: 28px 28px 32px;
+    border-radius: 16px;
+    padding: 20px 20px 24px;
   }
 
   /* ---------- Hero ---------- */
@@ -124,7 +124,7 @@
   /* ---------- Cards ---------- */
   #refinery-relay-settings .rr-card {
     border: 1px solid var(--rr-border);
-    border-radius: 16px;
+    border-radius: 12px;
     background: var(--rr-surface);
     box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 6px 16px rgba(15, 23, 42, 0.04);
     overflow: hidden;
@@ -132,33 +132,34 @@
   #refinery-relay-settings .rr-card-header {
     display: flex;
     align-items: flex-start;
-    gap: 13px;
-    padding: 22px 24px 0;
+    gap: 10px;
+    padding: 16px 18px 0;
   }
   #refinery-relay-settings .rr-card-icon {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    flex: 0 0 36px;
-    width: 36px;
-    height: 36px;
-    border-radius: 10px;
+    flex: 0 0 30px;
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
     background: var(--rr-accent-soft);
     color: var(--rr-accent-dark);
   }
-  #refinery-relay-settings .rr-card-icon svg { width: 18px; height: 18px; }
+  #refinery-relay-settings .rr-card-icon svg { width: 15px; height: 15px; }
   #refinery-relay-settings .rr-card-header h3 {
     margin-bottom: 3px;
     color: var(--rr-ink);
-    font-size: 15px;
+    font-size: 13.5px;
     font-weight: 700;
     letter-spacing: -0.01em;
   }
   #refinery-relay-settings .rr-card-header p {
     color: var(--rr-muted);
-    font-size: 12.5px;
+    font-size: 11.5px;
   }
-  #refinery-relay-settings .rr-card-body { padding: 18px 24px 24px; }
+  #refinery-relay-settings .rr-card-body { padding: 8px 18px 16px; }
+  #refinery-relay-settings .rr-card-body--sources { padding-top: 4px; }
 
   /* ---------- Fields ---------- */
   #refinery-relay-settings .rr-grid {
@@ -234,24 +235,26 @@
   #refinery-relay-settings .rr-source-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px;
+    column-gap: 10px;
+    row-gap: 6px;
+    align-items: start;
   }
+  #refinery-relay-settings .rr-source-config {
+    min-width: 0;
+    margin: 0;
+  }
+
   #refinery-relay-settings .rr-source-option {
-    position: relative;
-    display: flex;
-    align-items: flex-start;
-    gap: 10px;
-    padding: 12px 30px 12px 12px;
     border: 1px solid var(--rr-border);
-    border-radius: 11px;
+    border-radius: 10px;
     background: #fff;
-    cursor: pointer;
-    transition: border-color 140ms ease, box-shadow 140ms ease;
+    overflow: hidden;
+    transition: border-color 140ms ease, background 140ms ease;
   }
   #refinery-relay-settings .rr-source-option:hover { border-color: var(--rr-border-strong); }
-  #refinery-relay-settings .rr-source-option:has(input:checked) {
+  #refinery-relay-settings .rr-source-option:has(.rr-checkbox:checked) {
     border-color: var(--rr-accent);
-    box-shadow: 0 0 0 1px var(--rr-accent);
+    background: #fbfffd;
   }
   #refinery-relay-settings .rr-source-option input {
     position: absolute;
@@ -260,33 +263,243 @@
     height: 1px;
     pointer-events: none;
   }
+
+  /* Compact source header: content is vertically centered and does not
+     create excess top/bottom space inside each card. */
+  #refinery-relay-settings .rr-source-toggle {
+    position: relative;
+    display: flex;
+    align-items: center;
+    width: 100%;
+    min-height: 52px;
+    gap: 8px;
+    margin: 0 !important;
+    padding: 7px 30px 7px 11px !important;
+    cursor: pointer;
+    line-height: 1;
+  }
+  #refinery-relay-settings .rr-source-content {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+  }
+  #refinery-relay-settings .rr-source-name {
+    display: block;
+    margin: 0;
+    padding: 0;
+    color: var(--rr-ink);
+    font-size: 11.5px;
+    font-weight: 700;
+    line-height: 1.2;
+  }
+  #refinery-relay-settings .rr-source-description {
+    display: block;
+    margin: 2px 0 0;
+    padding: 0;
+    color: var(--rr-muted);
+    font-size: 10px;
+    line-height: 1.2;
+  }
   #refinery-relay-settings .rr-source-check {
     position: absolute;
-    top: 10px;
-    right: 10px;
+    top: 50%;
+    right: 9px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 17px;
-    height: 17px;
+    width: 14px;
+    height: 14px;
+    margin: 0;
     border-radius: 50%;
     border: 1.5px solid var(--rr-border-strong);
     background: #fff;
+    transform: translateY(-50%);
     transition: background 140ms ease, border-color 140ms ease;
   }
   #refinery-relay-settings .rr-source-check svg {
-    width: 10px;
-    height: 10px;
+    width: 9px;
+    height: 9px;
     opacity: 0;
     transition: opacity 100ms ease;
   }
-  #refinery-relay-settings .rr-source-option:has(input:checked) .rr-source-check {
+  #refinery-relay-settings .rr-source-option:has(.rr-checkbox:checked) .rr-source-check {
     border-color: var(--rr-accent);
     background: var(--rr-accent);
   }
-  #refinery-relay-settings .rr-source-option:has(input:checked) .rr-source-check svg { opacity: 1; }
-  #refinery-relay-settings .rr-source-name { display: block; color: var(--rr-ink); font-size: 12.5px; font-weight: 700; }
-  #refinery-relay-settings .rr-source-description { display: block; margin-top: 2px; color: var(--rr-muted); font-size: 11px; line-height: 1.35; }
+  #refinery-relay-settings .rr-source-option:has(.rr-checkbox:checked) .rr-source-check svg { opacity: 1; }
+
+  /* Unavailable variant */
+  #refinery-relay-settings .rr-source-option--unavailable {
+    border-color: #edf1f5;
+    background: #fbfcfd;
+  }
+  #refinery-relay-settings .rr-source-option--unavailable:hover { border-color: #edf1f5; }
+  #refinery-relay-settings .rr-source-option--unavailable .rr-source-check { display: none; }
+  #refinery-relay-settings .rr-source-option--unavailable .rr-source-toggle { padding-right: 11px !important; cursor: not-allowed; }
+  #refinery-relay-settings .rr-source-option--unavailable .rr-source-name { color: #64748b; }
+  #refinery-relay-settings .rr-source-option--unavailable .rr-source-description { color: #94a3b8; }
+
+  #refinery-relay-settings .rr-unavailable-sources {
+    margin-top: 14px;
+    border: 0;
+    background: transparent;
+  }
+  #refinery-relay-settings .rr-unavailable-sources summary {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 2px;
+    color: #94a3b8;
+    cursor: pointer;
+    font-size: 10.5px;
+    font-weight: 600;
+    list-style: none;
+  }
+  #refinery-relay-settings .rr-unavailable-sources summary::-webkit-details-marker { display: none; }
+  #refinery-relay-settings .rr-unavailable-sources summary::after {
+    content: "";
+    width: 5px;
+    height: 5px;
+    margin-left: 2px;
+    border-right: 1px solid currentColor;
+    border-bottom: 1px solid currentColor;
+    transform: rotate(45deg) translateY(-1px);
+    transition: transform 160ms ease;
+  }
+  #refinery-relay-settings .rr-unavailable-sources[open] summary::after { transform: rotate(225deg) translate(-1px, -1px); }
+  #refinery-relay-settings .rr-unavailable-count {
+    color: #94a3b8;
+    font-size: 10px;
+    font-variant-numeric: tabular-nums;
+  }
+  #refinery-relay-settings .rr-unavailable-count::before { content: "· "; }
+  #refinery-relay-settings .rr-unavailable-body {
+    margin-top: 7px;
+    padding: 9px 0 0;
+    border-top: 1px solid #f1f5f9;
+  }
+  #refinery-relay-settings .rr-unavailable-copy {
+    margin: 0 2px 8px;
+    color: #94a3b8;
+    font-size: 10px;
+    line-height: 1.4;
+  }
+
+  /* Fields drawer — sits directly below the compact source header. */
+  #refinery-relay-settings .rr-source-fields {
+    margin: 0 9px 7px;
+    padding: 0;
+    border-top: 1px solid #edf2f7;
+    color: var(--rr-muted);
+  }
+  #refinery-relay-settings .rr-source-fields summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 4px;
+    margin: 0;
+    padding: 5px 0;
+    color: var(--rr-muted);
+    cursor: pointer;
+    font-size: 10px;
+    font-weight: 600;
+    line-height: 1.2;
+    list-style: none;
+    outline: none;
+  }
+  #refinery-relay-settings .rr-source-fields summary::-webkit-details-marker { display: none; }
+  #refinery-relay-settings .rr-source-fields summary:focus-visible {
+    outline: 2px solid rgba(16, 185, 129, 0.45);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+  #refinery-relay-settings .rr-source-fields[open] summary {
+    color: var(--rr-ink);
+    font-weight: 700;
+  }
+  #refinery-relay-settings .rr-source-fields-meta {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    margin: 0;
+    font-size: 10px;
+    font-weight: 600;
+    line-height: 1;
+  }
+  #refinery-relay-settings .rr-source-field-count { color: var(--rr-accent-dark); font-variant-numeric: tabular-nums; }
+  #refinery-relay-settings .rr-source-fields-chevron { width: 10px; height: 10px; transition: transform 160ms ease; }
+  #refinery-relay-settings .rr-source-fields[open] .rr-source-fields-chevron { transform: rotate(180deg); }
+  #refinery-relay-settings .rr-source-fields:not([open]) .rr-source-field-list { display: none; }
+
+  #refinery-relay-settings .rr-source-fields-copy {
+    margin: 0 0 6px;
+    padding: 0;
+    color: var(--rr-muted);
+    font-size: 10.5px;
+    line-height: 1.35;
+  }
+
+  #refinery-relay-settings .rr-source-field-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 10px;
+    row-gap: 2px;
+    margin: 0;
+    padding: 1px 0 6px;
+    animation: rr-field-reveal 160ms ease-out;
+  }
+  #refinery-relay-settings .rr-source-field-option {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    margin: 0;
+    padding: 3px 0;
+    color: var(--rr-body);
+    cursor: pointer;
+    font-size: 10.5px;
+    font-weight: 600;
+    line-height: 1.2;
+    transition: color 140ms ease;
+  }
+  #refinery-relay-settings .rr-source-field-option::before {
+    content: "";
+    flex: 0 0 10px;
+    width: 10px;
+    height: 10px;
+    border: 1.5px solid var(--rr-border-strong);
+    border-radius: 3px;
+    background: #fff;
+    transition: background 140ms ease, border-color 140ms ease, box-shadow 140ms ease;
+  }
+  #refinery-relay-settings .rr-source-field-option:hover { color: var(--rr-ink); }
+  #refinery-relay-settings .rr-source-field-option:hover::before { border-color: var(--rr-border-strong); }
+  #refinery-relay-settings .rr-source-field-option:has(input:checked) { color: var(--rr-accent-dark); }
+  #refinery-relay-settings .rr-source-field-option:has(input:checked)::before {
+    border-color: var(--rr-accent);
+    background: var(--rr-accent);
+    box-shadow: inset 0 0 0 2px var(--rr-accent-soft);
+  }
+  #refinery-relay-settings .rr-source-field-option:has(input:focus-visible) {
+    outline: 2px solid rgba(16, 185, 129, 0.38);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+  #refinery-relay-settings .rr-source-field-option input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+    pointer-events: none;
+  }
+  @keyframes rr-field-reveal {
+    from { opacity: 0; transform: translateY(-3px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
 
   /* ---------- Copy surfaces / buttons ---------- */
   #refinery-relay-settings .rr-copy-row { display: flex; align-items: stretch; gap: 8px; }
@@ -407,7 +620,8 @@
     #refinery-relay-settings .rr-hero h2 { font-size: 21px; }
     #refinery-relay-settings .rr-hero-actions { justify-content: space-between; margin-top: 16px; padding-top: 0; }
     #refinery-relay-settings .rr-grid,
-    #refinery-relay-settings .rr-source-grid { grid-template-columns: 1fr; }
+    #refinery-relay-settings .rr-source-grid,
+    #refinery-relay-settings .rr-source-field-list { grid-template-columns: 1fr; }
     #refinery-relay-settings .rr-copy-row,
     #refinery-relay-settings .rr-copy-surface,
     #refinery-relay-settings .rr-token-copy,
@@ -421,7 +635,8 @@
 </style>
 
 <div id="refinery-relay-settings">
-  <% source_options = RefineryRelay::SourceRegistry.options %>
+  <% source_statuses = @source_statuses || RefineryRelay::SourceRegistry.source_statuses(host: request.host_with_port, protocol: request.protocol) %>
+  <% available_source_statuses, unavailable_source_statuses = source_statuses.partition(&:ingestible?) %>
   <% relay_configured = @relay_setting.source_token.present? && @relay_setting.widget_markup.present? %>
 
   <div class="rr-canvas">
@@ -482,27 +697,30 @@
                 <p>Choose which Refinery content families Relay should ingest and make searchable.</p>
               </div>
             </div>
-            <div class="rr-card-body">
+            <div class="rr-card-body rr-card-body--sources">
               <%= form.hidden_field :source_types, multiple: true, value: "" %>
               <div class="rr-source-grid">
-                <% source_options.each do |source| %>
-                  <% source_key = source.key %>
-                  <label class="rr-source-option">
-                    <%= form.check_box :source_types,
-                                       { multiple: true, include_hidden: false, class: "rr-checkbox" },
-                                       source_key,
-                                       nil %>
-                    <span>
-                      <span class="rr-source-name"><%= source.label %></span>
-                      <span class="rr-source-description"><%= source.description %></span>
-                    </span>
-                    <span class="rr-source-check" aria-hidden="true">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                    </span>
-                  </label>
+                <% available_source_statuses.each do |source_status| %>
+                  <%= render "source_option", form: form, source_status: source_status %>
                 <% end %>
               </div>
-              <p class="rr-hint">Optional sources are skipped safely when their Refinery extension is not installed.</p>
+              <% if unavailable_source_statuses.present? %>
+                <details class="rr-unavailable-sources">
+                  <summary>
+                    <span>Diagnostics</span>
+                    <span class="rr-unavailable-count"><%= unavailable_source_statuses.length %> unavailable source<%= "s" unless unavailable_source_statuses.one? %></span>
+                  </summary>
+                  <div class="rr-unavailable-body">
+                    <p class="rr-unavailable-copy">Installed engines without a working public endpoint. Relay skips them until the host page is fixed.</p>
+                    <div class="rr-source-grid">
+                      <% unavailable_source_statuses.each do |source_status| %>
+                        <%= render "source_option", form: form, source_status: source_status %>
+                      <% end %>
+                    </div>
+                  </div>
+                </details>
+              <% end %>
+              <p class="rr-hint">Relay checks each source’s public collection page as an anonymous visitor. Unavailable sources cannot be selected; each enabled source lists only safe text fields.</p>
 
               <div class="rr-field" style="margin-top: 20px;">
                 <div class="rr-label-row">
@@ -593,6 +811,29 @@
           }, 1600);
         });
       });
+    });
+
+    document.querySelectorAll('#refinery-relay-settings [data-rr-source-toggle]').forEach(function (toggle) {
+      var sourceConfig = toggle.closest('.rr-source-config');
+      var fieldPicker = sourceConfig && sourceConfig.querySelector('[data-rr-source-fields]');
+      if (!fieldPicker) return;
+
+      var syncFieldPicker = function () {
+        fieldPicker.hidden = !toggle.checked || toggle.disabled;
+      };
+
+      var fieldCount = fieldPicker.querySelector('[data-rr-field-count]');
+      var syncFieldCount = function () {
+        if (!fieldCount) return;
+        fieldCount.textContent = fieldPicker.querySelectorAll('.rr-source-field-checkbox:checked').length;
+      };
+
+      toggle.addEventListener('change', syncFieldPicker);
+      fieldPicker.querySelectorAll('.rr-source-field-checkbox').forEach(function (checkbox) {
+        checkbox.addEventListener('change', syncFieldCount);
+      });
+      syncFieldPicker();
+      syncFieldCount();
     });
   })();
 </script>

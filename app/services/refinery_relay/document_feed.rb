@@ -36,11 +36,12 @@ module RefineryRelay
       new(cursor: cursor, public_base_url: public_base_url).call
     end
 
-    def initialize(cursor:, public_base_url:, page_size: DEFAULT_PAGE_SIZE, source_types: nil, route_helpers: nil)
+    def initialize(cursor:, public_base_url:, page_size: DEFAULT_PAGE_SIZE, source_types: nil, source_field_mappings: nil, route_helpers: nil)
       @cursor = decode_cursor(cursor)
       @public_base_url = public_base_url.to_s.sub(%r{/+\z}, "")
       @page_size = [[page_size.to_i, 1].max, MAX_PAGE_SIZE].min
       @source_types = normalize_source_types(source_types || RelaySetting.current.source_types)
+      @source_field_mappings = normalize_source_field_mappings(source_field_mappings || RelaySetting.current.source_field_mappings)
       @route_helpers = route_helpers
     end
 
@@ -58,12 +59,23 @@ module RefineryRelay
 
     private
 
-    attr_reader :cursor, :public_base_url, :page_size, :source_types
+    attr_reader :cursor, :public_base_url, :page_size, :source_types, :source_field_mappings
 
     def cursor_state
       return tombstone_state if cursor.blank? || cursor["mode"] == "complete"
 
       mode = cursor["mode"] == "snapshot" ? "pages" : cursor["mode"]
+      # Existing cursors predate field mappings. Restarting their snapshot is
+      # intentional: Relay needs every document rebuilt with the new field set.
+      return tombstone_state unless cursor.key?("source_field_mappings")
+      return tombstone_state unless cursor.key?("citation_policies")
+
+      if normalize_source_field_mappings(cursor["source_field_mappings"]) != source_field_mappings
+        return tombstone_state
+      end
+
+      return tombstone_state unless cursor["citation_policies"] == citation_policies
+
       if mode == "pages"
         return source_state(0, cursor.fetch("last_id"))
       end
@@ -104,7 +116,7 @@ module RefineryRelay
       while limit.positive? && source_index < source_types.length
         source_type = source_types.fetch(source_index)
         records, more_records = source_batch(source_type, last_id, limit)
-        documents.concat(records.map { |record| document_for_source(record, source_type) }.compact)
+        documents.concat(records.map { |record| document_for_selected_source(record, source_type) }.compact)
         limit -= records.length
 
         if more_records
@@ -159,6 +171,10 @@ module RefineryRelay
       { "external_id" => tombstone.external_id, "deleted" => true }
     end
 
+    def deleted_source_document(record, source_type)
+      { "external_id" => "#{source_type}:#{record.id}", "deleted" => true }
+    end
+
     def source_scope(source_type, last_id)
       return page_scope(last_id) if source_type == "pages"
 
@@ -175,24 +191,70 @@ module RefineryRelay
       relation.where(model.arel_table[:id].gt(last_id)).order(id: :asc)
     end
 
+    def document_for_selected_source(record, source_type)
+      return document_for(record) if source_type == "pages"
+
+      return deleted_source_document(record, source_type) unless source_status_for(source_type).ingestible?
+
+      document_for_source(record, source_type)
+    end
+
     def page_scope(last_id)
       ::Refinery::Page.live.where("refinery_pages.id > ?", last_id).order("refinery_pages.id ASC")
     end
 
     def tombstone_state(last_id = 0)
-      { "mode" => "tombstones", "last_id" => last_id, "source_types" => source_types }
+      {
+        "mode" => "tombstones", "last_id" => last_id, "source_types" => source_types,
+        "source_field_mappings" => source_field_mappings, "citation_policies" => citation_policies
+      }
     end
 
     def source_state(source_index, last_id)
-      { "mode" => "sources", "source_index" => source_index, "last_id" => Integer(last_id), "source_types" => source_types }
+      {
+        "mode" => "sources", "source_index" => source_index, "last_id" => Integer(last_id),
+        "source_types" => source_types, "source_field_mappings" => source_field_mappings,
+        "citation_policies" => citation_policies
+      }
     end
 
     def complete_state
-      { "mode" => "complete", "source_types" => source_types }
+      {
+        "mode" => "complete", "source_types" => source_types,
+        "source_field_mappings" => source_field_mappings, "citation_policies" => citation_policies
+      }
     end
 
     def normalize_source_types(values)
       Array(values).map(&:to_s) & SourceRegistry.keys
+    end
+
+    def normalize_source_field_mappings(mappings)
+      SourceRegistry.normalize_field_mappings(mappings)
+    end
+
+    def citation_policies
+      @citation_policies ||= source_types.each_with_object({}) do |source_type, policies|
+        next if source_type == "pages"
+
+        definition = SourceRegistry.fetch(source_type)&.definition
+        next unless definition
+        status = source_status_for(source_type)
+
+        policies[source_type] = {
+          "strategy" => definition.fetch(:citation_strategy, :record).to_s,
+          "collection_path" => definition[:collection_path].to_s,
+          "anchor" => definition[:citation_anchor].respond_to?(:call) ? "callable" : definition[:citation_anchor].to_s,
+          "endpoint_available" => status.ingestible?
+        }
+      end
+    end
+
+    def source_status_for(source_type)
+      @source_statuses ||= {}
+      @source_statuses[source_type] ||= SourceRegistry.source_status(
+        SourceRegistry.fetch(source_type), host: public_endpoint_host, protocol: public_endpoint_protocol
+      )
     end
 
     def document_for(page)
@@ -235,7 +297,7 @@ module RefineryRelay
       title_attribute = definition[:title]
       title_value = record.public_send(title_attribute) if title_attribute && record.respond_to?(title_attribute)
       title = plain_text(title_value).presence || "Untitled #{source_type.humanize.downcase}"
-      fields = definition.fetch(:fields).each_with_object([]) do |field, values|
+      fields = fields_for_source(source, definition).each_with_object([]) do |field, values|
         next unless record.respond_to?(field)
 
         text = plain_text(record.public_send(field))
@@ -267,6 +329,13 @@ module RefineryRelay
       document
     end
 
+    def fields_for_source(source, definition)
+      selected_fields = source_field_mappings[source.key]
+      return definition.fetch(:fields) if selected_fields.blank?
+
+      selected_fields.map(&:to_sym)
+    end
+
     def source_content_blocks(title, fields, pods)
       blocks = [ { "kind" => "heading", "level" => 1, "text" => title } ]
       fields.each do |label, value|
@@ -277,14 +346,42 @@ module RefineryRelay
     end
 
     def source_url(record, definition)
-      # Plugin admin URLs identify an engine during discovery but must never be
-      # emitted as public Relay citations. A source has to provide a verified
-      # public route helper, either automatically or via its source contract.
-      path = route_path_for(record, definition.fetch(:route))
+      # A resource route can exist without being the canonical visitor-facing
+      # page. Automatically detected engines therefore cite their public
+      # collection page. Explicit source contracts can opt into record routes
+      # or a stable collection anchor when the host has one.
+      path = citation_path_for(record, definition)
       return unless public_route_path?(path)
+      return unless public_endpoint_available?(path)
 
       candidate = path.match?(%r{\Ahttps?://}i) ? path : "#{public_base_url}#{path.start_with?("/") ? path : "/#{path}"}"
       normalized_http_url(candidate)
+    end
+
+    def citation_path_for(record, definition)
+      case definition.fetch(:citation_strategy, :record).to_sym
+      when :collection
+        definition[:collection_path]
+      when :collection_anchor
+        collection_path_with_anchor(record, definition)
+      when :record_or_collection
+        record_path = route_path_for(record, definition[:route])
+        return record_path if public_route_path?(record_path) && public_endpoint_available?(record_path)
+
+        definition[:collection_path]
+      else
+        route_path_for(record, definition[:route]) || definition[:collection_path]
+      end
+    end
+
+    def collection_path_with_anchor(record, definition)
+      path = definition[:collection_path].to_s
+      return if path.blank?
+
+      anchor = definition[:citation_anchor]
+      anchor = anchor.call(record) if anchor.respond_to?(:call)
+      anchor = anchor.to_s.delete_prefix("#")
+      anchor.present? ? "#{path}##{anchor}" : path
     end
 
     def route_path_for(record, route_name = nil)
@@ -321,6 +418,25 @@ module RefineryRelay
       Refinery::Core::Engine.routes.url_helpers
     rescue NoMethodError
       nil
+    end
+
+    def public_endpoint_host
+      uri = URI.parse(public_base_url)
+      return unless uri.host
+
+      uri.port ? "#{uri.host}:#{uri.port}" : uri.host
+    rescue URI::InvalidURIError
+      nil
+    end
+
+    def public_endpoint_protocol
+      URI.parse(public_base_url).scheme
+    rescue URI::InvalidURIError
+      "http"
+    end
+
+    def public_endpoint_available?(path)
+      PublicEndpointValidator.call(path: path, host: public_endpoint_host, protocol: public_endpoint_protocol).available?
     end
 
     def page_parts(page)

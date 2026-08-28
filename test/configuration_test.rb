@@ -17,6 +17,7 @@ class RefineryRelayConfigurationTest < ActiveSupport::TestCase
       model: FakeFaqSource.name,
       title: :question,
       fields: [ :answer ],
+      field_options: [ :answer ],
       scope: :live,
       route: :faq_path
     )
@@ -38,6 +39,7 @@ class RefineryRelayConfigurationTest < ActiveSupport::TestCase
       chat_token: "chat-token",
       chat_tenant_key: "refinery-site",
       source_types: %w[pages faqs],
+      source_field_mappings: { "faqs" => [ "answer" ] },
       chat_open_timeout_seconds: 8,
       chat_read_timeout_seconds: 60,
       redis_url: "redis://127.0.0.1:6379/0"
@@ -51,6 +53,7 @@ class RefineryRelayConfigurationTest < ActiveSupport::TestCase
     assert_equal "chat-token", configuration.chat_token
     assert_equal "refinery-site", configuration.chat_tenant_key
     assert_equal %w[pages faqs], configuration.source_types
+    assert_equal({ "faqs" => [ "answer" ] }, configuration.source_field_mappings)
     assert_equal 8, configuration.chat_open_timeout_seconds
     assert_equal 60, configuration.chat_read_timeout_seconds
     assert_equal "redis://127.0.0.1:6379/0", configuration.redis_url

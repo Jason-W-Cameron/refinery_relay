@@ -23,6 +23,7 @@ class RefineryRelayRelaySettingsControllerTest < ActionDispatch::IntegrationTest
       model: FakeFaqSource.name,
       title: :question,
       fields: [ :answer ],
+      field_options: %i[answer internal_notes],
       path: "/faqs",
       scope: :live,
       route: :faq_path
@@ -46,6 +47,7 @@ class RefineryRelayRelaySettingsControllerTest < ActionDispatch::IntegrationTest
       assert_select "input[value='#{source.key}']", count: 1
     end
     assert_select "input[type='hidden'][name='relay_setting[source_types][]'][value='']"
+    assert_select "input[name='relay_setting[source_field_mappings][faqs][]'][value='answer']"
     assert_select "code#relay-feed-endpoint", /refinery_relay\/api\/relay\/documents/
     assert_select "button[data-rr-copy='relay-feed-endpoint']", "Copy endpoint"
     assert_select "form button", "Generate bearer token"
@@ -58,12 +60,13 @@ class RefineryRelayRelaySettingsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Relay Settings", Refinery::Plugins.registered["relay_settings"].title
   end
 
-  test "saves source types and widget markup without exposing chat credentials" do
+  test "saves source types, selected source fields, and widget markup without exposing chat credentials" do
     setting = RefineryRelay::RelaySetting.create!(source_token: "existing-source-token")
 
     patch SETTINGS_PATH, params: {
       relay_setting: {
         source_types: [ "pages", "faqs", "not-a-source" ],
+        source_field_mappings: { faqs: [ "answer", "internal_notes", "not-a-field" ] },
         widget_markup: '<script src="https://relay.example/widget.js"></script><div data-relay-widget></div>'
       }
     }
@@ -71,7 +74,8 @@ class RefineryRelayRelaySettingsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to SETTINGS_PATH
     setting.reload
     assert_equal "existing-source-token", setting.source_token
-    assert_equal %w[pages faqs], setting.source_types
+    assert_equal [ "pages" ], setting.source_types
+    assert_equal({}, setting.source_field_mappings)
     assert_equal '<script src="https://relay.example/widget.js"></script><div data-relay-widget></div>', setting.widget_markup
   end
 

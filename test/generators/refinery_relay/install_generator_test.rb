@@ -27,11 +27,13 @@ class RefineryRelayInstallGeneratorTest < Rails::Generators::TestCase
     widget_migration = Dir.glob(File.join(destination_root, "db/migrate/*_add_widget_markup_to_refinery_relay_settings.rb")).first
     tombstones_migration = Dir.glob(File.join(destination_root, "db/migrate/*_create_refinery_relay_source_tombstones.rb")).first
     source_types_migration = Dir.glob(File.join(destination_root, "db/migrate/*_add_source_types_to_refinery_relay_settings.rb")).first
+    source_field_mappings_migration = Dir.glob(File.join(destination_root, "db/migrate/*_add_source_field_mappings_to_refinery_relay_settings.rb")).first
     pod_type_migration = Dir.glob(File.join(destination_root, "db/migrate/*_rename_llm_chat_pod_type_to_relay_chat.rb")).first
     assert settings_migration
     assert widget_migration
     assert tombstones_migration
     assert source_types_migration
+    assert source_field_mappings_migration
     assert pod_type_migration
     refute_equal File.basename(settings_migration).first(14), File.basename(tombstones_migration).first(14)
     refute_equal File.basename(widget_migration).first(14), File.basename(tombstones_migration).first(14)

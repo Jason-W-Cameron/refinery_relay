@@ -26,9 +26,11 @@ class RefineryRelayDocumentFeedTest < ActiveSupport::TestCase
       model: FakeFaq.name,
       title: :question,
       fields: [ :answer ],
+      field_options: [ :answer ],
       path: "/faqs",
       scope: :live,
-      route: :faq_path
+      route: :faq_path,
+      citation_strategy: :collection
     )
     RefineryRelay::SourceRegistry.register(
       key: "blog_posts",
@@ -36,6 +38,7 @@ class RefineryRelayDocumentFeedTest < ActiveSupport::TestCase
       model: FakeBlogPost.name,
       title: :title,
       fields: %i[custom_teaser body],
+      field_options: %i[custom_teaser body],
       scope: :live,
       route: :blog_post_path
     )
@@ -55,6 +58,16 @@ class RefineryRelayDocumentFeedTest < ActiveSupport::TestCase
     end
 
     private
+
+    def source_status_for(source_type)
+      RefineryRelay::SourceRegistry::SourceStatus.new(
+        source: RefineryRelay::SourceRegistry.fetch(source_type), ingestible: true
+      )
+    end
+
+    def public_endpoint_available?(_path)
+      true
+    end
 
     def page_scope(last_id)
       pages = @pages.select { |page| page.id > last_id }
@@ -189,22 +202,18 @@ class RefineryRelayDocumentFeedTest < ActiveSupport::TestCase
     now = Time.utc(2026, 8, 25, 12, 0, 0)
     faq = FakeFaq.new(4, "How does Relay work?", "Relay indexes the selected Refinery content.", now, nil)
     page = FakePage.new(7, "Not selected", "not-selected", "/not-selected", [], [], now)
-    route_helpers = Object.new
-    route_helpers.define_singleton_method(:faq_path) { |record| "/faqs/#{record.id}" }
-
     payload = TestFeed.new(
       pages: [ page ],
       source_records: { "faqs" => [ faq ] },
       source_types: [ "faqs" ],
       cursor: nil,
-      public_base_url: "https://sit.example",
-      route_helpers: route_helpers
+      public_base_url: "https://sit.example"
     ).call
 
     assert_equal [ "faqs:4" ], payload.fetch("documents").map { |document| document.fetch("external_id") }
     document = payload.fetch("documents").first
     assert_equal "faq", document.fetch("content_type")
-    assert_equal "https://sit.example/faqs/4", document.fetch("url")
+    assert_equal "https://sit.example/faqs", document.fetch("url")
     assert_includes document.fetch("content"), "Relay indexes the selected Refinery content."
   end
 
@@ -213,6 +222,17 @@ class RefineryRelayDocumentFeedTest < ActiveSupport::TestCase
     faq = FakeFaq.new(4, "How does Relay work?", "Relay indexes the selected Refinery content.", now, nil)
     route_helpers = Object.new
     route_helpers.define_singleton_method(:faq_path) { |_record| "/refinery/faqs/4" }
+    RefineryRelay::SourceRegistry.register(
+      key: "faqs",
+      label: "FAQs",
+      model: FakeFaq.name,
+      title: :question,
+      fields: [ :answer ],
+      field_options: [ :answer ],
+      scope: :live,
+      route: :faq_path,
+      citation_strategy: :record
+    )
 
     payload = TestFeed.new(
       pages: [],
@@ -224,6 +244,119 @@ class RefineryRelayDocumentFeedTest < ActiveSupport::TestCase
     ).call
 
     assert_equal [], payload.fetch("documents")
+  end
+
+  test "uses a source's stable collection anchor when it is declared" do
+    now = Time.utc(2026, 8, 25, 12, 0, 0)
+    faq = FakeFaq.new(4, "How does Relay work?", "Relay indexes the selected Refinery content.", now, nil)
+    RefineryRelay::SourceRegistry.register(
+      key: "faqs",
+      label: "FAQs",
+      model: FakeFaq.name,
+      title: :question,
+      fields: [ :answer ],
+      field_options: [ :answer ],
+      scope: :live,
+      route: :faq_path,
+      citation_strategy: :collection_anchor,
+      collection_path: "/faqs",
+      citation_anchor: ->(record) { "faq-#{record.id}" }
+    )
+
+    document = TestFeed.new(
+      pages: [], source_records: { "faqs" => [ faq ] }, source_types: [ "faqs" ],
+      cursor: nil, public_base_url: "https://sit.example"
+    ).call.fetch("documents").first
+
+    assert_equal "https://sit.example/faqs#faq-4", document.fetch("url")
+  end
+
+  test "uses a verified record URL before falling back to a collection URL" do
+    now = Time.utc(2026, 8, 25, 12, 0, 0)
+    faq = FakeFaq.new(4, "How does Relay work?", "Relay indexes the selected Refinery content.", now, nil)
+    route_helpers = Object.new
+    route_helpers.define_singleton_method(:faq_path) { |record| "/faqs/#{record.id}" }
+    RefineryRelay::SourceRegistry.register(
+      key: "faqs",
+      label: "FAQs",
+      model: FakeFaq.name,
+      title: :question,
+      fields: [ :answer ],
+      field_options: [ :answer ],
+      scope: :live,
+      route: :faq_path,
+      citation_strategy: :record_or_collection,
+      collection_path: "/faqs"
+    )
+
+    document = TestFeed.new(
+      pages: [], source_records: { "faqs" => [ faq ] }, source_types: [ "faqs" ],
+      cursor: nil, public_base_url: "https://sit.example", route_helpers: route_helpers
+    ).call.fetch("documents").first
+
+    assert_equal "https://sit.example/faqs/4", document.fetch("url")
+  end
+
+  test "falls back to the collection URL when a record URL is not viable" do
+    now = Time.utc(2026, 8, 25, 12, 0, 0)
+    faq = FakeFaq.new(4, "How does Relay work?", "Relay indexes the selected Refinery content.", now, nil)
+    route_helpers = Object.new
+    route_helpers.define_singleton_method(:faq_path) { |record| "/faqs/#{record.id}" }
+    RefineryRelay::SourceRegistry.register(
+      key: "faqs",
+      label: "FAQs",
+      model: FakeFaq.name,
+      title: :question,
+      fields: [ :answer ],
+      field_options: [ :answer ],
+      scope: :live,
+      route: :faq_path,
+      citation_strategy: :record_or_collection,
+      collection_path: "/faqs"
+    )
+    feed = TestFeed.new(
+      pages: [], source_records: { "faqs" => [ faq ] }, source_types: [ "faqs" ],
+      cursor: nil, public_base_url: "https://sit.example", route_helpers: route_helpers
+    )
+    feed.define_singleton_method(:public_endpoint_available?) { |path| path == "/faqs" }
+
+    document = feed.call.fetch("documents").first
+
+    assert_equal "https://sit.example/faqs", document.fetch("url")
+  end
+
+  test "restarts a snapshot when a source citation policy changes" do
+    now = Time.utc(2026, 8, 25, 12, 0, 0)
+    faq = FakeFaq.new(4, "How does Relay work?", "Relay indexes the selected Refinery content.", now, nil)
+    later_faq = FakeFaq.new(5, "What is Relay?", "Relay answers from selected content.", now, nil)
+
+    first = TestFeed.new(
+      pages: [], source_records: { "faqs" => [ faq, later_faq ] }, source_types: [ "faqs" ],
+      cursor: nil, public_base_url: "https://sit.example", page_size: 1
+    ).call
+
+    RefineryRelay::SourceRegistry.register(
+      key: "faqs",
+      label: "FAQs",
+      model: FakeFaq.name,
+      title: :question,
+      fields: [ :answer ],
+      field_options: [ :answer ],
+      scope: :live,
+      route: :faq_path,
+      citation_strategy: :collection_anchor,
+      collection_path: "/faqs",
+      citation_anchor: ->(record) { "faq-#{record.id}" }
+    )
+
+    refreshed = TestFeed.new(
+      pages: [], source_records: { "faqs" => [ faq, later_faq ] }, source_types: [ "faqs" ],
+      cursor: first.fetch("cursor"), public_base_url: "https://sit.example", page_size: 1
+    ).call
+
+    document = refreshed.fetch("documents").first
+    assert_equal "faqs:4", document.fetch("external_id")
+    assert_equal "https://sit.example/faqs#faq-4", document.fetch("url")
   end
 
   test "uses the Refinery route helper for source URLs" do
@@ -248,5 +381,49 @@ class RefineryRelayDocumentFeedTest < ActiveSupport::TestCase
 
       assert_equal "http://localhost:3000/blog/posts/why-your-marketing-spend-matters-more-than-you-think", document.fetch("url")
     end
+  end
+
+  test "uses the saved field mapping instead of a source's default fields" do
+    now = Time.utc(2026, 8, 25, 12, 0, 0)
+    post = FakeBlogPost.new(8, "Field selection", nil, "Teaser that should not be indexed.", "The selected article body.", now, nil, nil)
+    route_helpers = Object.new
+    route_helpers.define_singleton_method(:blog_post_path) { |_record| "/blog/posts/8" }
+
+    document = TestFeed.new(
+      pages: [],
+      source_records: { "blog_posts" => [ post ] },
+      source_types: [ "blog_posts" ],
+      source_field_mappings: { "blog_posts" => [ "body" ] },
+      cursor: nil,
+      public_base_url: "https://sit.example",
+      route_helpers: route_helpers
+    ).call.fetch("documents").first
+
+    assert_includes document.fetch("content"), "The selected article body."
+    assert_not_includes document.fetch("content"), "Teaser that should not be indexed."
+  end
+
+  test "restarts a snapshot when selected source fields change" do
+    now = Time.utc(2026, 8, 25, 12, 0, 0)
+    post = FakeBlogPost.new(8, "Field selection", nil, "Teaser", "Body", now, nil, nil)
+    later_post = FakeBlogPost.new(9, "Later field selection", nil, "Later teaser", "Later body", now, nil, nil)
+    route_helpers = Object.new
+    route_helpers.define_singleton_method(:blog_post_path) { |_record| "/blog/posts/8" }
+
+    first = TestFeed.new(
+      pages: [], source_records: { "blog_posts" => [ post, later_post ] }, source_types: [ "blog_posts" ],
+      source_field_mappings: { "blog_posts" => [ "body" ] }, cursor: nil,
+      public_base_url: "https://sit.example", route_helpers: route_helpers, page_size: 1
+    ).call
+
+    refreshed = TestFeed.new(
+      pages: [], source_records: { "blog_posts" => [ post, later_post ] }, source_types: [ "blog_posts" ],
+      source_field_mappings: { "blog_posts" => [ "custom_teaser" ] }, cursor: first.fetch("cursor"),
+      public_base_url: "https://sit.example", route_helpers: route_helpers, page_size: 1
+    ).call
+
+    assert_equal [ "blog_posts:8" ], refreshed.fetch("documents").map { |document| document.fetch("external_id") }
+    assert_includes refreshed.fetch("documents").first.fetch("content"), "Teaser"
+    assert_not_includes refreshed.fetch("documents").first.fetch("content"), "Body"
   end
 end

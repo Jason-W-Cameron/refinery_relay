@@ -9,6 +9,10 @@ require "rails/test_help"
 module StubClassMethod
   def stub_class_method(klass, method_name, replacement)
     original = klass.method(method_name)
+    unless replacement.respond_to?(:call)
+      value = replacement
+      replacement = ->(*) { value }
+    end
     klass.define_singleton_method(method_name, replacement)
     yield
   ensure

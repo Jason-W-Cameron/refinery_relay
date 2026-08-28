@@ -7,6 +7,7 @@ module RefineryRelay
 
     attr_accessor :source_token,
                   :source_types,
+                  :source_field_mappings,
                   :public_base_url,
                   :chat_base_url,
                   :chat_token,
@@ -25,6 +26,7 @@ module RefineryRelay
       new(
         source_token: settings.source_token,
         source_types: settings.source_types,
+        source_field_mappings: settings.source_field_mappings,
         public_base_url: settings.public_base_url,
         chat_base_url: settings.chat_base_url,
         chat_token: settings.chat_token,
@@ -40,7 +42,7 @@ module RefineryRelay
       )
     end
 
-    def initialize(source_token: nil, source_types: RelaySetting::DEFAULT_SOURCE_TYPES,
+    def initialize(source_token: nil, source_types: RelaySetting::DEFAULT_SOURCE_TYPES, source_field_mappings: {},
                    public_base_url: "", chat_base_url: "", chat_token: nil,
                    sync_token: nil, sync_source_id: nil, sync_base_url: "",
                    chat_tenant_key: "refinery", chat_open_timeout_seconds: DEFAULT_CHAT_OPEN_TIMEOUT_SECONDS,
@@ -50,6 +52,7 @@ module RefineryRelay
                    redis_url: nil)
       @source_token = source_token
       @source_types = Array(source_types).map(&:to_s) & SourceRegistry.keys
+      @source_field_mappings = normalize_source_field_mappings(source_field_mappings)
       @public_base_url = public_base_url
       @chat_base_url = chat_base_url
       @chat_token = chat_token
@@ -66,6 +69,10 @@ module RefineryRelay
 
     def source_types
       @source_types || RelaySetting::DEFAULT_SOURCE_TYPES
+    end
+
+    def source_field_mappings
+      @source_field_mappings || {}
     end
 
     def public_base_url
@@ -105,6 +112,10 @@ module RefineryRelay
     end
 
     private
+
+    def normalize_source_field_mappings(mappings)
+      SourceRegistry.normalize_field_mappings(mappings)
+    end
 
     def strip_trailing_slashes(value)
       value.to_s.sub(%r{/+\z}, "")

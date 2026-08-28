@@ -44,7 +44,7 @@ module RefineryRelay
         install_callback(model, RefineryRelay::SourceSyncCallbacks) if model
       end
 
-      RefineryRelay::SourceRegistry.options.each do |source|
+      RefineryRelay::SourceRegistry.available.each do |source|
         next if source.key == "pages"
 
         install_callback(source.model, RefineryRelay::SourceTombstoneCallbacks)

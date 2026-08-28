@@ -3,7 +3,14 @@ source "https://rubygems.org"
 # Specify your gem's dependencies in refinery_relay.gemspec.
 gemspec
 
-# Use a Rails 5-compatible Pods extension when developing this compatibility
-# line. Consuming applications select their own compatible Pods source.
-gem "refinerycms-pods", path: "../../sit_v4/vendor/extensions/pods"
-gem "pg"
+# Use the Rails 8-compatible Refinery baseline. Consuming applications can
+# select their own compatible Refinery source.
+gem "decorators", git: "https://github.com/parndt/decorators.git", ref: "8ba6dc68c30b5400ee97c642d57748ecaa94830c"
+gem "refinerycms-core", git: "https://github.com/refinery/refinerycms.git", ref: "28c0d7754b60e4e50172e34088f03be504934e46"
+gem "refinerycms-pods", path: "../../simonsays2021/vendor/extensions/pods"
+
+gem "puma"
+gem "sqlite3", ">= 2.1"
+# Older FFI releases cannot load on Ruby 3.4+; Sass's file watcher uses it.
+gem "ffi", ">= 1.15"
+gem "rubocop-rails-omakase", require: false

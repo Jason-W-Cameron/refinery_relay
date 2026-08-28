@@ -31,6 +31,7 @@ module RefineryRelay
     def self.default_attributes
       {
         source_types: DEFAULT_SOURCE_TYPES,
+        source_field_mappings: {},
         chat_tenant_key: "refinery",
         chat_open_timeout_seconds: Configuration::DEFAULT_CHAT_OPEN_TIMEOUT_SECONDS,
         chat_read_timeout_seconds: Configuration::DEFAULT_CHAT_READ_TIMEOUT_SECONDS,
@@ -39,11 +40,10 @@ module RefineryRelay
       }
     end
 
-    # JSON-in-text keeps this setting portable across host database adapters.
-    # Rails 5 stores serialized values as YAML. Existing Refinery Relay rows
-    # therefore contain values such as `---\n- pages\n`, so use the native
-    # Array serializer rather than the JSON coder used by newer Rails lines.
-    serialize :source_types, Array
+    # Keep the established YAML representation so installations upgraded from
+    # Rails 5 can continue to read their existing setting rows on Rails 8.
+    serialize :source_types, coder: YAML, type: Array
+    serialize :source_field_mappings, coder: YAML, type: Hash
 
     def source_types
       values = super
@@ -55,11 +55,29 @@ module RefineryRelay
       super(Array(values).map(&:to_s) & SourceRegistry.keys)
     end
 
+    # A mapping only contains fields that the currently discovered source has
+    # explicitly made available. Empty selections are omitted so the feed can
+    # continue using that source's conservative default fields.
+    def source_field_mappings
+      normalize_source_field_mappings(super || {})
+    end
+
+    def source_field_mappings=(mappings)
+      super(normalize_source_field_mappings(mappings))
+    end
+
     validates :chat_open_timeout_seconds, :sync_open_timeout_seconds,
               numericality: { only_integer: true, greater_than_or_equal_to: 1, less_than_or_equal_to: 30 },
               allow_nil: true
     validates :chat_read_timeout_seconds,
               numericality: { only_integer: true, greater_than_or_equal_to: 1, less_than_or_equal_to: 120 },
               allow_nil: true
+
+    private
+
+    def normalize_source_field_mappings(mappings)
+      values = mappings.respond_to?(:to_h) ? mappings.to_h : mappings
+      SourceRegistry.normalize_field_mappings(values)
+    end
   end
 end
