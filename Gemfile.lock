@@ -26,13 +26,6 @@ GIT
       zilch-authorisation (~> 0, >= 0.0.1)
 
 PATH
-  remote: ../../simonsays2021/vendor/extensions/pods
-  specs:
-    refinerycms-pods (1.0)
-      acts_as_indexed (~> 0.8.0)
-      refinerycms-core (~> 4.1.0)
-
-PATH
   remote: .
   specs:
     refinery_relay (0.1.0.rails8.1)
@@ -118,7 +111,6 @@ GEM
       securerandom (>= 0.3)
       tzinfo (~> 2.0, >= 2.0.5)
       uri (>= 0.13.1)
-    acts_as_indexed (0.8.3)
     addressable (2.6.0)
       public_suffix (>= 2.0.2, < 4.0)
     ast (2.4.3)
@@ -269,6 +261,7 @@ GEM
       mobility (~> 1.2)
       rails-i18n (>= 5.0)
       routing-filter (~> 0.7)
+    refinerycms-pods (1.0.3)
     regexp_parser (2.12.0)
     reline (0.7.0)
       io-console (~> 0.5)
@@ -373,7 +366,6 @@ DEPENDENCIES
   puma
   refinery_relay!
   refinerycms-core!
-  refinerycms-pods!
   rubocop-rails-omakase
   selenium-webdriver (>= 4.6, < 5)
   sqlite3 (>= 2.1)
