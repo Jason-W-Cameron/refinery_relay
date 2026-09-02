@@ -36,11 +36,11 @@ module RefineryRelay
 
       private
 
-      # Refinery's admin layout expects the host's `refinery` route proxy.
-      # This isolated engine is mounted alongside Refinery, so use the host
-      # route set to keep the shared layout and sidebar available.
+      # Refinery's admin layout expects a route proxy, not the url_helpers
+      # module itself. `main_app` supplies the host proxy (including
+      # `root_path`) on Rails 6 and later.
       def refinery
-        Rails.application.routes.url_helpers
+        main_app
       end
 
       def relay_documents_endpoint
