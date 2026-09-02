@@ -37,10 +37,11 @@ module RefineryRelay
       private
 
       # Refinery's admin layout expects a route proxy, not the url_helpers
-      # module itself. `main_app` supplies the host proxy (including
-      # `root_path`) on Rails 6 and later.
+      # module itself. Some Rails 6 Refinery hosts do not expose a named
+      # `root_path` on that proxy; the wrapper preserves all host helpers and
+      # supplies the public-site fallback required by Refinery's site bar.
       def refinery
-        main_app
+        RefineryRouteProxy.new(main_app)
       end
 
       def relay_documents_endpoint
@@ -63,6 +64,26 @@ module RefineryRelay
         attributes[:source_field_mappings] = attributes[:source_field_mappings].to_h.slice(*attributes[:source_types])
 
         attributes
+      end
+
+      class RefineryRouteProxy
+        def initialize(route_proxy)
+          @route_proxy = route_proxy
+        end
+
+        def root_path(*arguments)
+          @route_proxy.public_send(:root_path, *arguments)
+        rescue NoMethodError
+          "/"
+        end
+
+        def method_missing(method_name, *arguments, &block)
+          @route_proxy.public_send(method_name, *arguments, &block)
+        end
+
+        def respond_to_missing?(method_name, include_private = false)
+          method_name == :root_path || @route_proxy.respond_to?(method_name, include_private) || super
+        end
       end
     end
   end
