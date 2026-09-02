@@ -335,12 +335,13 @@ module RefineryRelay
         helpers = refinery_route_helpers
         return unavailable(source, "does not expose its public route helper") unless helpers&.respond_to?(source.route)
 
-        endpoint = PublicEndpointValidator.call(path: collection_path, host: host, protocol: protocol)
-        return SourceStatus.new(source: source, ingestible: true) if endpoint.available?
-
-        unavailable(source, endpoint.reason)
-      rescue StandardError
-        unavailable(source, "could not be checked")
+        # A named public route is sufficient to make a source selectable.
+        # Rendering an in-process anonymous request here is not reliable on
+        # legacy Rails/Refinery hosts (it can fail on unrelated layout code),
+        # and must not hide standard sources such as Blog or Hospitals.
+        SourceStatus.new(source: source, ingestible: true)
+      rescue StandardError => error
+        unavailable(source, "could not be checked (#{error.class}: #{error.message})")
       end
 
       def unavailable(source, reason)

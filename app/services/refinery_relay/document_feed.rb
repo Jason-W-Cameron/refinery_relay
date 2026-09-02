@@ -352,7 +352,6 @@ module RefineryRelay
       # or a stable collection anchor when the host has one.
       path = citation_path_for(record, definition)
       return unless public_route_path?(path)
-      return unless public_endpoint_available?(path)
 
       candidate = path.match?(%r{\Ahttps?://}i) ? path : "#{public_base_url}#{path.start_with?("/") ? path : "/#{path}"}"
       normalized_http_url(candidate)

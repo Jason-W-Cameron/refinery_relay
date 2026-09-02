@@ -134,7 +134,7 @@ class RefineryRelaySourceRegistryTest < ActiveSupport::TestCase
     end
   end
 
-  test "marks an installed source unavailable when its collection page fails" do
+  test "keeps a source with a declared public route selectable" do
     RefineryRelay::SourceRegistry.register(
       key: "relay_detected",
       model: "Refinery::RelayDetected::Entry",
@@ -147,16 +147,11 @@ class RefineryRelaySourceRegistryTest < ActiveSupport::TestCase
     )
     route_helpers = Object.new
     route_helpers.define_singleton_method(:relay_detected_path) { |_record| "/relay-detected/1" }
-    endpoint = RefineryRelay::PublicEndpointValidator::Result.new(available: false, reason: "returns HTTP 500", path: "/relay-detected")
-
     stub_class_method(RefineryRelay::SourceRegistry, :refinery_route_helpers, route_helpers) do
-      stub_class_method(RefineryRelay::PublicEndpointValidator, :call, endpoint) do
-        status = RefineryRelay::SourceRegistry.source_status(RefineryRelay::SourceRegistry.fetch("relay_detected"), host: "sit.example", protocol: "https")
+      status = RefineryRelay::SourceRegistry.source_status(RefineryRelay::SourceRegistry.fetch("relay_detected"), host: "sit.example", protocol: "https")
 
-        refute_predicate status, :ingestible?
-        assert_equal "returns HTTP 500", status.reason
-        refute_includes RefineryRelay::SourceRegistry.options.map(&:key), "relay_detected"
-      end
+      assert_predicate status, :ingestible?
+      assert_includes RefineryRelay::SourceRegistry.options.map(&:key), "relay_detected"
     end
   end
 
