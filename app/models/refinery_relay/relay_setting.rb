@@ -40,10 +40,16 @@ module RefineryRelay
       }
     end
 
-    # Keep the established YAML representation so installations upgraded from
-    # Rails 5 can continue to read their existing setting rows on Rails 8.
-    serialize :source_types, coder: YAML, type: Array
-    serialize :source_field_mappings, coder: YAML, type: Hash
+    # Rails 6 takes the serialized type as the second positional argument,
+    # whereas Rails 7+ takes it as a keyword. Both forms use YAML, preserving
+    # the representation used by existing installations.
+    if ActiveRecord::VERSION::MAJOR >= 7
+      serialize :source_types, coder: YAML, type: Array
+      serialize :source_field_mappings, coder: YAML, type: Hash
+    else
+      serialize :source_types, Array
+      serialize :source_field_mappings, Hash
+    end
 
     def source_types
       values = super
