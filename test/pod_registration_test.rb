@@ -26,6 +26,18 @@ class RefineryRelayPodRegistrationTest < ActiveSupport::TestCase
     assert_not RefineryRelay::PodRegistration.install!(pod_class: pod_class)
   end
 
+  test "registers Relay Chat with the Pods admin picker API" do
+    pod_type_class = Class.new do
+      def self.pod_types
+        [ { name: "content", type_image_small: "content.svg" } ]
+      end
+    end
+
+    assert RefineryRelay::PodRegistration.install!(pod_class: nil, pod_type_class: pod_type_class)
+    assert_includes pod_type_class.pod_types, RefineryRelay::PodRegistration::POD_TYPE_METADATA
+    assert_not RefineryRelay::PodRegistration.install!(pod_class: nil, pod_type_class: pod_type_class)
+  end
+
   test "waits safely when the pods extension is unavailable" do
     assert_not RefineryRelay::PodRegistration.install!(pod_class: nil)
   end

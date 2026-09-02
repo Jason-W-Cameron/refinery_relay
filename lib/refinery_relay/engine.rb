@@ -26,6 +26,12 @@ module RefineryRelay
       end
     end
 
+    initializer "refinery_relay.assets" do |app|
+      next unless app.config.respond_to?(:assets)
+
+      app.config.assets.precompile += %w[pods/types/relay_chat.svg]
+    end
+
     config.to_prepare do
       RefineryRelay::SourceRegistry.reset!
       RefineryRelay::PodRegistration.install!
