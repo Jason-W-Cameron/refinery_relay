@@ -7,6 +7,11 @@ This gem does not ship a visual implementation. It registers the `Relay Chat`
 Relay owns all browser UI, branding, styles, images, and interactive chat
 behavior.
 
+## Compatibility
+
+RefineryRelay supports Ruby 2.6+, Rails 6.0+, and Refinery CMS 4.1 through
+6.x.
+
 ## Installation
 
 Add the gem to a Refinery application and run:

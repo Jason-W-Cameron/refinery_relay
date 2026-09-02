@@ -3,7 +3,7 @@ source "https://rubygems.org"
 # Specify your gem's dependencies in refinery_relay.gemspec.
 gemspec
 
-# Use the Rails 8-compatible Refinery baseline. Consuming applications can
+# Use the Refinery baseline for development. Consuming applications can
 # select their own compatible Refinery source.
 gem "decorators", git: "https://github.com/parndt/decorators.git", ref: "8ba6dc68c30b5400ee97c642d57748ecaa94830c"
 gem "refinerycms-core", git: "https://github.com/refinery/refinerycms.git", ref: "28c0d7754b60e4e50172e34088f03be504934e46"

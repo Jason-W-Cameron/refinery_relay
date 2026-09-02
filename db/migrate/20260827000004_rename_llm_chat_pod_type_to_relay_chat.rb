@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-class RenameLlmChatPodTypeToRelayChat < ActiveRecord::Migration[8.1]
+class RenameLlmChatPodTypeToRelayChat < ActiveRecord::Migration[6.0]
   def up
     return unless table_exists?(:refinery_pods)
 

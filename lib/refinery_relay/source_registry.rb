@@ -284,14 +284,14 @@ module RefineryRelay
       def selectable_fields_for(model, title)
         return [] unless model.respond_to?(:columns)
 
-        model.columns.filter_map do |column|
+        model.columns.map do |column|
           name = column.name.to_s
           next unless TEXT_COLUMN_TYPES.include?(column.type.to_sym)
           next if name == title.to_s
           next if non_content_field?(name)
 
           name
-        end
+        end.compact
       rescue StandardError
         []
       end

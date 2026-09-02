@@ -16,11 +16,10 @@ Gem::Specification.new do |spec|
     Dir["{app,config,db,lib}/**/*", "MIT-LICENSE", "Rakefile", "README.md"]
   end
 
-  # Refinery CMS 4.1 supports the Rails 8 release line.
-  spec.required_ruby_version = ">= 3.2"
+  spec.required_ruby_version = ">= 2.6"
 
-  spec.add_dependency "rails", ">= 8.1.3", "< 9"
-  spec.add_dependency "refinerycms-core", ">= 4.1", "< 5"
+  spec.add_dependency "rails", ">= 6.0", "< 9"
+  spec.add_dependency "refinerycms-core", ">= 4.1", "< 7"
   spec.add_dependency "refinerycms-pods", "~> 1.0"
   spec.add_dependency "redis", ">= 5.0", "< 7"
 

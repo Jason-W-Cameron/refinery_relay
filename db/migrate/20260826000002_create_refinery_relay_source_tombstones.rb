@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-class CreateRefineryRelaySourceTombstones < ActiveRecord::Migration[8.1]
+class CreateRefineryRelaySourceTombstones < ActiveRecord::Migration[6.0]
   def up
     return if table_exists?(:refinery_relay_source_tombstones)
 
