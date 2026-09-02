@@ -16,9 +16,12 @@ Gem::Specification.new do |spec|
     Dir["{app,config,db,lib}/**/*", "MIT-LICENSE", "Rakefile", "README.md"]
   end
 
-  spec.required_ruby_version = ">= 3.2"
+  spec.required_ruby_version = ">= 2.6"
 
-  spec.add_dependency "rails", ">= 8.1.3", "< 9"
+  # Refinery CMS 4.1 supports Rails 6.1 and later. Keep the engine's
+  # constraint aligned with that supported range instead of requiring the
+  # Rails version used by this gem's development environment.
+  spec.add_dependency "rails", ">= 6.1", "< 9"
   spec.add_dependency "refinerycms-core", ">= 4.1", "< 5"
   spec.add_dependency "refinerycms-pods", "~> 1.0"
   spec.add_dependency "redis", ">= 5.0", "< 7"

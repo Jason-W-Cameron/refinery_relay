@@ -50,10 +50,10 @@ module RedisTestServer
   end
 
   def redis_server_executable
-    ENV.fetch("PATH", "").split(File::PATH_SEPARATOR).filter_map do |directory|
+    ENV.fetch("PATH", "").split(File::PATH_SEPARATOR).map do |directory|
       candidate = File.join(directory, "redis-server")
       candidate if File.file?(candidate) && File.executable?(candidate)
-    end.first
+    end.compact.first
   end
 
   def available_tcp_port

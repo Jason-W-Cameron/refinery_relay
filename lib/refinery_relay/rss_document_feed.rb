@@ -14,7 +14,7 @@ module RefineryRelay
     MAX_ITEMS = 100
 
     def self.call(feed_url:)
-      new(feed_url:).call
+      new(feed_url: feed_url).call
     end
 
     def initialize(feed_url:)
@@ -122,9 +122,9 @@ module RefineryRelay
     end
 
     def item_content(item)
-      value = %w[encoded content description summary].filter_map do |name|
+      value = %w[encoded content description summary].map do |name|
         child_text(item, name).presence
-      end.first
+      end.compact.first
       clean_text(value)
     end
 
@@ -144,18 +144,18 @@ module RefineryRelay
     end
 
     def item_categories(item)
-      item.xpath("./*[local-name()='category']").filter_map do |category|
+      item.xpath("./*[local-name()='category']").map do |category|
         clean_text(category["term"].presence || category.text).presence
-      end
+      end.compact
     end
 
     def item_updated_at(item, feed)
-      raw_date = %w[updated published pubDate date].filter_map do |name|
+      raw_date = %w[updated published pubDate date].map do |name|
         child_text(item, name).presence
-      end.first
-      raw_date ||= %w[lastBuildDate updated].filter_map do |name|
+      end.compact.first
+      raw_date ||= %w[lastBuildDate updated].map do |name|
         child_text(feed_container(feed), name).presence
-      end.first
+      end.compact.first
 
       raw_date.present? ? Time.parse(raw_date) : Time.current
     rescue ArgumentError

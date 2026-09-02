@@ -4,7 +4,7 @@ require "test_helper"
 require "net/http"
 
 class RefineryRelayChatClientTest < ActiveSupport::TestCase
-  FakeResponse = Data.define(:code, :body) do
+  FakeResponse = Struct.new(:code, :body, keyword_init: true) do
     def is_a?(klass)
       return true if klass == Net::HTTPSuccess && code.to_i.between?(200, 299)
 

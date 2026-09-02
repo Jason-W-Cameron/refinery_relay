@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-class AddFooterLogoSettingsToRefineryRelayPodSettings < ActiveRecord::Migration[8.1]
+class AddFooterLogoSettingsToRefineryRelayPodSettings < ActiveRecord::Migration[6.1]
   def up
     return unless table_exists?(:refinery_relay_pod_settings)
 

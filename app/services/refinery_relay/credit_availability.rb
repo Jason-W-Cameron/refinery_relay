@@ -12,11 +12,17 @@ module RefineryRelay
 
     class CacheUnavailable < StandardError; end
 
-    def self.available? = new.available?
+    def self.available?
+      new.available?
+    end
 
-    def self.mark_unavailable!(resets_at:) = new.mark_unavailable!(resets_at:)
+    def self.mark_unavailable!(resets_at:)
+      new.mark_unavailable!(resets_at: resets_at)
+    end
 
-    def self.clear_unavailability! = new.clear_unavailability!
+    def self.clear_unavailability!
+      new.clear_unavailability!
+    end
 
     def self.stream_name
       "relay_chat:#{RefineryRelay.configuration.chat_tenant_key}"

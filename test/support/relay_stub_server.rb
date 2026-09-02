@@ -40,7 +40,12 @@ class RelayStubServer
     method, path = request_line.split
     headers = read_headers(socket)
     body = socket.read(headers.fetch("content-length", "0").to_i)
-    requests << { method:, path:, headers:, body: body.presence && JSON.parse(body) }
+    requests << {
+      method: method,
+      path: path,
+      headers: headers,
+      body: body.presence && JSON.parse(body)
+    }
 
     if method == "GET" && path == "/source"
       respond(socket, "text/html", <<~HTML)

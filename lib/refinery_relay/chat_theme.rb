@@ -34,7 +34,9 @@ module RefineryRelay
     end
 
     def editable_values
-      EDITABLE_ATTRIBUTES.index_with { |attribute| public_send(attribute) }
+      EDITABLE_ATTRIBUTES.each_with_object({}) do |attribute, values|
+        values[attribute] = public_send(attribute)
+      end
     end
 
     def css_variables

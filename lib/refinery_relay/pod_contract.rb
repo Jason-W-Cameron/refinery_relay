@@ -21,7 +21,7 @@ module RefineryRelay
       items = pod.pod_items
       items = items.order(:position) if items.respond_to?(:order)
 
-      Array(items).filter_map { |item| item.title.presence }
+      Array(items).map { |item| item.title.presence }.compact
     end
   end
 end

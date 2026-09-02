@@ -3,8 +3,8 @@
 require "test_helper"
 
 class RefineryRelayLlmChatPodTest < ActionView::TestCase
-  PodItem = Data.define(:title, :position)
-  Pod = Data.define(:id, :system_name, :title, :pod_items)
+  PodItem = Struct.new(:title, :position, keyword_init: true)
+  Pod = Struct.new(:id, :system_name, :title, :pod_items, keyword_init: true)
 
   class PodItems < Array
     def order(attribute)
