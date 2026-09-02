@@ -46,7 +46,10 @@ module RefineryRelay
 
     CORE_PLUGIN_NAMES = %w[core pages pods settings relay_settings].freeze
     TITLE_FIELDS = %w[title name question subject headline].freeze
-    CONTENT_FIELDS = %w[body content description summary short_description teaser answer details].freeze
+    CONTENT_FIELDS = %w[body content description summary short_description teaser custom_teaser answer details].freeze
+    VIRTUAL_CONTENT_FIELDS = %w[
+      body content description summary short_description teaser custom_teaser answer details tag_list
+    ].freeze
     TEXT_COLUMN_TYPES = %i[string text].freeze
     NON_CONTENT_FIELD_NAMES = %w[
       id created_at updated_at deleted_at published_at unpublished_at position lock_version
@@ -284,7 +287,7 @@ module RefineryRelay
       def selectable_fields_for(model, title)
         return [] unless model.respond_to?(:columns)
 
-        model.columns.map do |column|
+        column_fields = model.columns.map do |column|
           name = column.name.to_s
           next unless TEXT_COLUMN_TYPES.include?(column.type.to_sym)
           next if name == title.to_s
@@ -292,6 +295,21 @@ module RefineryRelay
 
           name
         end.compact
+        (column_fields + selectable_virtual_fields_for(model, title)).uniq
+      rescue StandardError
+        []
+      end
+
+      # Refinery Blog (and several older Refinery extensions) stores its
+      # translated content outside the primary model table. These attributes
+      # are still safe to index when the model explicitly exposes them.
+      def selectable_virtual_fields_for(model, title)
+        instance_methods = model.instance_methods.map(&:to_s)
+        translated_attributes = model.respond_to?(:translated_attribute_names) ? model.translated_attribute_names.map(&:to_s) : []
+        available_attributes = instance_methods + translated_attributes
+        VIRTUAL_CONTENT_FIELDS.select do |field|
+          field != title.to_s && available_attributes.include?(field)
+        end
       rescue StandardError
         []
       end

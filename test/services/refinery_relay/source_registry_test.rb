@@ -54,6 +54,20 @@ module Refinery
       end
     end
   end
+
+  module VirtualContent
+    class Article
+      Column = Struct.new(:name, :type)
+
+      def self.columns
+        [ Column.new("title", :string), Column.new("source_url", :string) ]
+      end
+
+      def body; end
+      def custom_teaser; end
+      def tag_list; end
+    end
+  end
 end
 
 class RefineryRelaySourceRegistryTest < ActiveSupport::TestCase
@@ -132,6 +146,19 @@ class RefineryRelaySourceRegistryTest < ActiveSupport::TestCase
     stub_class_method(RefineryRelay::SourceRegistry, :refinery_route_helpers, route_helpers) do
       assert_equal "/blog", RefineryRelay::SourceRegistry.send(:public_collection_path_for, "blog", "blog_posts")
     end
+  end
+
+  test "offers translated and tag-list virtual content fields" do
+    fields = RefineryRelay::SourceRegistry.send(
+      :selectable_fields_for,
+      Refinery::VirtualContent::Article,
+      "title"
+    )
+
+    assert_includes fields, "body"
+    assert_includes fields, "custom_teaser"
+    assert_includes fields, "tag_list"
+    refute_includes fields, "title"
   end
 
   test "keeps a source with a declared public route selectable" do
