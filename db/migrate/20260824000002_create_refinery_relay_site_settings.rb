@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-class CreateRefineryRelaySiteSettings < ActiveRecord::Migration[6.1]
+class CreateRefineryRelaySiteSettings < ActiveRecord::Migration[6.0]
   def up
     return if table_exists?(:refinery_relay_site_settings)
 

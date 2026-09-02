@@ -18,11 +18,10 @@ Gem::Specification.new do |spec|
 
   spec.required_ruby_version = ">= 2.6"
 
-  # Refinery CMS 4.1 supports Rails 6.1 and later. Keep the engine's
-  # constraint aligned with that supported range instead of requiring the
-  # Rails version used by this gem's development environment.
-  spec.add_dependency "rails", ">= 6.1", "< 9"
-  spec.add_dependency "refinerycms-core", ">= 4.1", "< 5"
+  # Keep the engine compatible with Rails 6.0 host applications while
+  # permitting newer Rails and Refinery releases.
+  spec.add_dependency "rails", ">= 6.0", "< 9"
+  spec.add_dependency "refinerycms-core", ">= 4.1", "< 7"
   spec.add_dependency "refinerycms-pods", "~> 1.0"
   spec.add_dependency "redis", ">= 5.0", "< 7"
 

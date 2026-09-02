@@ -35,10 +35,10 @@ PATH
 PATH
   remote: .
   specs:
-    refinery_relay (0.1.0)
-      rails (>= 6.1, < 9)
+    refinery_relay (0.1.1)
+      rails (>= 6.0, < 9)
       redis (>= 5.0, < 7)
-      refinerycms-core (>= 4.1, < 5)
+      refinerycms-core (>= 4.1, < 7)
       refinerycms-pods (~> 1.0)
 
 GEM
@@ -503,7 +503,7 @@ CHECKSUMS
   rdoc (8.0.0) sha256=03bf8c08a9639658855a0cfd77c0abca8325c227693f7f33f82957811348c469
   redis (6.0.0) sha256=de71c10edd106986b759ec7ecdd08b63b9c0ee7414a0d0c1da73d31ba2bccda6
   redis-client (0.30.1) sha256=5151bc5c7bbfe48623732cdae3b900d8a22dc691cc7cdfacfb351ac55116522d
-  refinery_relay (0.1.0)
+  refinery_relay (0.1.1)
   refinerycms-core (4.1.0)
   refinerycms-i18n (5.1.0) sha256=a2136f3a22b2ccca61547f969bf35da97ce09851ebc24e171a0cce3cd161ad05
   refinerycms-pods (1.0)
