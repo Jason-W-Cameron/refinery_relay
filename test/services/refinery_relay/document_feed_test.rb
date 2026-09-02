@@ -145,6 +145,38 @@ class RefineryRelayDocumentFeedTest < ActiveSupport::TestCase
     assert_equal [ "pages:1" ], restarted.fetch("documents").map { |document| document.fetch("external_id") }
   end
 
+  test "continues with the next source when pages fill a batch exactly" do
+    now = Time.utc(2026, 8, 25, 12, 0, 0)
+    pages = (1..25).map do |id|
+      FakePage.new(id, "Page #{id}", "page-#{id}", "/page-#{id}", [], [], now)
+    end
+    faq = FakeFaq.new(1, "How does Relay work?", "Relay indexes selected content.", now, "relay")
+
+    first = TestFeed.new(
+      pages: pages,
+      source_records: { "faqs" => [ faq ] },
+      source_types: [ "pages", "faqs" ],
+      cursor: nil,
+      public_base_url: "https://sit.example",
+      page_size: 25
+    ).call
+
+    assert_equal 25, first.fetch("documents").length
+    assert_equal first.fetch("cursor"), first.fetch("next_cursor")
+
+    second = TestFeed.new(
+      pages: pages,
+      source_records: { "faqs" => [ faq ] },
+      source_types: [ "pages", "faqs" ],
+      cursor: first.fetch("next_cursor"),
+      public_base_url: "https://sit.example",
+      page_size: 25
+    ).call
+
+    assert_equal [ "faqs:1" ], second.fetch("documents").map { |document| document.fetch("external_id") }
+    assert_nil second["next_cursor"]
+  end
+
   test "starts a direct snapshot when upgrading from an RSS hash cursor" do
     now = Time.utc(2026, 8, 25, 12, 0, 0)
     page = FakePage.new(1, "One", "one", "/one", [], [], now)

@@ -127,6 +127,8 @@ module RefineryRelay
         last_id = 0
       end
 
+      return [ documents, source_state(source_index, last_id) ] if source_index < source_types.length
+
       [ documents, complete_state ]
     end
 
